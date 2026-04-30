@@ -3,6 +3,7 @@ import 'react-native-url-polyfill/auto';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as WebBrowser from 'expo-web-browser';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
@@ -47,6 +48,10 @@ export default function RootLayout() {
     }
   }, [loaded, error]);
 
+  useEffect(() => {
+    WebBrowser.maybeCompleteAuthSession();
+  }, []);
+
   if (!loaded && !error) {
     return null;
   }
@@ -58,6 +63,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="signup" options={{ headerShown: false, presentation: 'card' }} />
           <Stack.Screen name="signin" options={{ headerShown: false, presentation: 'card' }} />
+          <Stack.Screen name="auth/callback" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="intro" options={{ headerShown: false, presentation: 'card' }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="loading" options={{ headerShown: false, presentation: 'card' }} />

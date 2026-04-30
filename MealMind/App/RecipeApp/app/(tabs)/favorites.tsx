@@ -1,85 +1,53 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useFocusEffect } from '@react-navigation/native';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { FallbackRecipeImage } from '@/components/FallbackRecipeImage';
 import { MealMindScreen } from '@/components/mealmind';
 import { MealMindColors } from '@/constants/mealmind-colors';
 import { MealMindRadii, MealMindShadow, MealMindSpace } from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
-import { getFavorites, removeFavorite, type StoredFavorite } from '@/lib/favorites-storage';
+import { getFavoriteEntries, removeFavoriteRecipe, type FavoriteEntry } from '@/lib/favorites-storage';
 import { showErrorToast, showSuccessToast } from '@/lib/mealmind-toast';
-import { FAVORITES_FILTER_CHIPS, type MealTypeId } from '@/lib/meal-taxonomy';
-
-type FilterId = (typeof FAVORITES_FILTER_CHIPS)[number]['id'];
-
+ 
 /** Shared image height so featured and grid rows align visually. */
 const FAVORITES_CARD_IMAGE_HEIGHT = 220;
-
+ 
 export default function FavoritesScreen() {
   const router = useRouter();
-  const [items, setItems] = useState<StoredFavorite[]>([]);
-  const [filter, setFilter] = useState<FilterId>('all');
+  const [entries, setEntries] = useState<FavoriteEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
-
-  const refresh = useCallback(async () => {
-    try {
-      const list = await getFavorites();
-      setItems(list);
-    } catch (e) {
-      showErrorToast('Favorites', e instanceof Error ? e.message : 'Could not load favorites.');
-    } finally {
-      setLoaded(true);
-    }
-  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      void refresh();
-    }, [refresh]),
+      let alive = true;
+      void getFavoriteEntries().then((list) => {
+        if (alive) {
+          setEntries(list);
+          setLoaded(true);
+        }
+      });
+      return () => {
+        alive = false;
+      };
+    }, []),
   );
 
-  const filtered = useMemo(() => {
-    if (filter === 'all') return items;
-    return items.filter((f) => f.mealTypes?.includes(filter as MealTypeId));
-  }, [filter, items]);
+  const featured = entries[0];
+  const compact = entries.slice(1);
 
-  const confirmRemove = useCallback(
-    (fav: StoredFavorite) => {
-      Alert.alert(
-        'Remove from favorites?',
-        `“${fav.title}” will be removed from your favorites list.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: () => {
-              void (async () => {
-                try {
-                  const next = await removeFavorite(fav.id);
-                  setItems(next);
-                  showSuccessToast('Removed', `${fav.title} is no longer in your favorites.`);
-                } catch (e) {
-                  showErrorToast(
-                    'Favorites',
-                    e instanceof Error ? e.message : 'Could not remove recipe.',
-                  );
-                }
-              })();
-            },
-          },
-        ],
-      );
-    },
-    [],
-  );
-
-  const featured = filtered[0];
-  const compact = filtered.length > 1 ? filtered.slice(1) : [];
+  const onRemove = useCallback(async (id: string) => {
+    try {
+      await removeFavoriteRecipe(id);
+      setEntries((prev) => prev.filter((e) => e.recipe.id !== id));
+      showSuccessToast('Removed from Favorites');
+    } catch (e) {
+      showErrorToast('Favorites', e instanceof Error ? e.message : 'Could not remove favorite.');
+    }
+  }, []);
 
   return (
     <MealMindScreen scroll={false} contentBottomInset={0} showFooter={false}>
@@ -108,40 +76,19 @@ export default function FavoritesScreen() {
             <View style={styles.pageHead}>
               <View style={styles.pageHeadRow}>
                 <Text style={styles.headline}>Your Favorites</Text>
-                <Text style={styles.count}>
-                  {items.length} {items.length === 1 ? 'Recipe' : 'Recipes'}
-                </Text>
+                <Text style={styles.count}>{entries.length} Recipes</Text>
               </View>
               <View style={styles.accentBar} />
             </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterRow}>
-              {FAVORITES_FILTER_CHIPS.map((chip) => {
-                const on = filter === chip.id;
-                return (
-                  <Pressable
-                    key={chip.id}
-                    onPress={() => setFilter(chip.id)}
-                    style={[styles.filterChip, on ? styles.filterChipOn : styles.filterChipOff]}>
-                    <Text style={[styles.filterChipText, on && styles.filterChipTextOn]}>
-                      {chip.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-
-            {loaded && items.length === 0 ? (
+ 
+            {loaded && entries.length === 0 ? (
               <View style={styles.emptyState}>
                 <View style={styles.emptyIcon}>
                   <MaterialIcons name="favorite-border" size={36} color={MealMindColors.primary} />
                 </View>
                 <Text style={styles.emptyTitle}>No favorites yet</Text>
                 <Text style={styles.emptyBody}>
-                  Tap the heart on a recipe to save it here for quick access later.
+                  Open a recipe and tap “Save to Favorites”. Your saved recipes will show up here.
                 </Text>
                 <Pressable
                   accessibilityRole="button"
@@ -152,21 +99,18 @@ export default function FavoritesScreen() {
               </View>
             ) : null}
 
-            {loaded && items.length > 0 && filtered.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>Nothing here yet</Text>
-                <Text style={styles.emptyBody}>
-                  You haven’t saved a recipe tagged with that meal type.
-                </Text>
-              </View>
-            ) : null}
-
             {featured != null ? (
               <Pressable
-                onPress={() => router.push(`/recipe/${featured.id}`)}
+                onPress={() => router.push(`/recipe/${featured.recipe.id}`)}
                 style={({ pressed }) => [styles.featured, pressed && styles.pressed]}>
                 <View style={styles.featuredImageWrap}>
-                  <Image source={{ uri: featured.image }} style={styles.featuredImage} contentFit="cover" />
+                  <FallbackRecipeImage
+                    uri={featured.recipe.heroImage}
+                    style={styles.featuredImage}
+                    contentFit="cover"
+                    useNeutralFallbacks={false}
+                    stableKey={`${featured.recipe.id}-fav-featured`}
+                  />
                   <LinearGradient
                     colors={['transparent', 'rgba(0,0,0,0.78)']}
                     locations={[0.38, 1]}
@@ -174,30 +118,30 @@ export default function FavoritesScreen() {
                     pointerEvents="none"
                   />
                   <View style={styles.imageOverlayBottom} pointerEvents="none">
-                    {featured.badgeLabels && featured.badgeLabels.length > 0 ? (
+                    {featured.recipe.tags.length > 0 ? (
                       <View style={styles.overlayBadgeRow}>
-                        {featured.badgeLabels.slice(0, 2).map((label) => (
-                          <View key={label} style={styles.overlayBadge}>
-                            <Text style={styles.overlayBadgeText}>{label}</Text>
+                        {featured.recipe.tags.slice(0, 2).map((t) => (
+                          <View key={t.label} style={styles.overlayBadge}>
+                            <Text style={styles.overlayBadgeText}>{t.label}</Text>
                           </View>
                         ))}
                       </View>
                     ) : null}
                     <Text style={styles.overlayTitle} numberOfLines={2}>
-                      {featured.title}
+                      {featured.recipe.title}
                     </Text>
-                    {featured.meta != null && featured.meta.length > 0 ? (
-                      <Text style={styles.overlayMetaLine} numberOfLines={1}>
-                        {featured.meta.map((m) => m.text).join(' · ')}
-                      </Text>
-                    ) : null}
+                    <Text style={styles.overlayMetaLine} numberOfLines={1}>
+                      {[featured.recipe.timeLabel, featured.recipe.kcalLabel, featured.recipe.servingsLabel]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </Text>
                   </View>
                   <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remove ${featured.title} from favorites`}
-                    onPress={() => confirmRemove(featured)}
+                    style={styles.fabHeart}
                     hitSlop={8}
-                    style={styles.fabHeart}>
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove from favorites"
+                    onPress={() => void onRemove(featured.recipe.id)}>
                     <MaterialIcons name="favorite" size={22} color={MealMindColors.primary} />
                   </Pressable>
                 </View>
@@ -206,13 +150,19 @@ export default function FavoritesScreen() {
 
             {compact.length > 0 ? (
               <View style={styles.grid}>
-                {compact.map((card) => (
+                {compact.map((entry) => (
                   <Pressable
-                    key={card.id}
-                    onPress={() => router.push(`/recipe/${card.id}`)}
+                    key={entry.recipe.id}
+                    onPress={() => router.push(`/recipe/${entry.recipe.id}`)}
                     style={({ pressed }) => [styles.compactCard, pressed && styles.pressed]}>
                     <View style={styles.compactImageWrap}>
-                      <Image source={{ uri: card.image }} style={styles.compactImage} contentFit="cover" />
+                      <FallbackRecipeImage
+                        uri={entry.recipe.heroImage}
+                        style={styles.compactImage}
+                        contentFit="cover"
+                        useNeutralFallbacks={false}
+                        stableKey={`${entry.recipe.id}-fav-compact`}
+                      />
                       <LinearGradient
                         colors={['transparent', 'rgba(0,0,0,0.78)']}
                         locations={[0.42, 1]}
@@ -220,24 +170,22 @@ export default function FavoritesScreen() {
                         pointerEvents="none"
                       />
                       <View style={styles.imageOverlayBottomCompact} pointerEvents="none">
-                        {card.badgeLabels?.[0] != null ? (
-                          <Text style={styles.overlayKicker}>{card.badgeLabels[0]}</Text>
+                        {entry.recipe.tags[0] != null ? (
+                          <Text style={styles.overlayKicker}>{entry.recipe.tags[0].label}</Text>
                         ) : null}
                         <Text style={styles.overlayTitleCompact} numberOfLines={2}>
-                          {card.title}
+                          {entry.recipe.title}
                         </Text>
-                        {card.meta != null && card.meta.length > 0 ? (
-                          <Text style={styles.overlayMetaLineCompact} numberOfLines={1}>
-                            {card.meta.map((m) => m.text).join(' · ')}
-                          </Text>
-                        ) : null}
+                        <Text style={styles.overlayMetaLineCompact} numberOfLines={1}>
+                          {[entry.recipe.timeLabel, entry.recipe.kcalLabel].filter(Boolean).join(' · ')}
+                        </Text>
                       </View>
                       <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`Remove ${card.title} from favorites`}
-                        onPress={() => confirmRemove(card)}
+                        style={styles.fabHeartSm}
                         hitSlop={8}
-                        style={styles.fabHeartSm}>
+                        accessibilityRole="button"
+                        accessibilityLabel="Remove from favorites"
+                        onPress={() => void onRemove(entry.recipe.id)}>
                         <MaterialIcons name="favorite" size={20} color={MealMindColors.primary} />
                       </Pressable>
                     </View>

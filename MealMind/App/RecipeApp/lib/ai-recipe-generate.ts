@@ -2,8 +2,10 @@ import { File, Paths } from 'expo-file-system';
 
 import type { PendingRecipeSearch } from '@/lib/recipe-generation-session';
 import { GENERIC_MEAL_IMAGE_PLACEHOLDERS } from '@/lib/recipe-image-placeholders';
+import { TRUSTED_RECIPE_HERO_URLS, type MockIngredient, type MockRecipe, type MockStep } from '@/lib/mealmind-recipe-mocks';
 import type { StoredProfile } from '@/lib/profile-storage';
-import type { MockIngredient, MockRecipe, MockStep } from '@/lib/mealmind-recipe-mocks';
+import { attachYoutubeVideoThumbnailsToRecipes } from '@/lib/recipe-tutorial-video';
+import { cookedDishSearchSuffix } from '@/lib/recipe-title-media-boost';
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_IMAGES_URL = 'https://api.openai.com/v1/images/generations';
@@ -75,8 +77,16 @@ function getRecipeHeroImageMode(): RecipeHeroImageMode {
   if (raw === 'generated_first' || raw === 'dalle_first') {
     return 'generated_first';
   }
+  const hasUnsplash = Boolean(getUnsplashAccessKey());
   const hasOpenAi = Boolean(process.env.EXPO_PUBLIC_OPENAI_API_KEY?.trim());
-  return hasOpenAi ? 'generated_first' : 'unsplash_only';
+  /** Real stock tends to look more natural than DALL·E; override with EXPO_PUBLIC_RECIPE_HERO_IMAGE_MODE. */
+  if (hasUnsplash) {
+    return 'unsplash_first';
+  }
+  if (hasOpenAi) {
+    return 'generated_first';
+  }
+  return 'unsplash_only';
 }
 
 function getDalleImageSize(): '1024x1024' | '1792x1024' | '1024x1792' {
@@ -95,6 +105,7 @@ function buildDalleRecipeHeroPrompt(
   profile: StoredProfile | null,
   pending: PendingRecipeSearch,
   r: MockRecipe,
+  slotIndex: number,
 ): string {
   const ing = r.ingredients
     .map((x) => x.name.trim())
@@ -109,7 +120,14 @@ function buildDalleRecipeHeroPrompt(
   const filterBit = `Meal occasion: ${pending.mealTypeLabel.trim() || 'meal'}. Home filters — time: ${pending.cookingTimeLabel.trim() || 'any'}; cooking style: ${pending.cookingStyleLabel.trim() || 'general'}.`;
   const ingredientsBit = userIng ? `The user typed these ingredients on the search screen — reflect them in the plate where realistic: ${userIng}.` : '';
 
-  const body = `Photorealistic professional food photograph of one finished dish only, overhead or three-quarter angle. Dish name: "${r.title}". The food on the plate must clearly match: ${iq}. Visible components should include: ${ing}. ${filterBit} ${ingredientsBit} ${profileBit} No people, hands, faces, chefs, kitchens with humans, text, logos, labels, or packaging. Neutral table or linen, soft natural light, sharp focus on the food, appetizing restaurant-style plating appropriate for the occasion.`;
+  const slotHint =
+    slotIndex === 0
+      ? 'Use a distinct look: e.g. dark cast-iron skillet or heavy pan, overhead.'
+      : slotIndex === 1
+        ? 'Use a clearly different look: e.g. light ceramic bowl, linen, 45° angle—not the same pan as a skillet meal.'
+        : 'Use a third distinct look: e.g. wide plate, wok-style saucy dish, or baking dish—must not resemble the other two cards.';
+
+  const body = `Single finished dish only — editorial food photograph like Bon Appétit or Saveur print: natural true-to-life colors (not neon or oversaturated), soft daylight from a window, gentle shadows, shallow depth of field. Shot on a real camera feel — slight asymmetry, crumbs, sauce sheen, honest home-kitchen styling; not CGI, not illustration, not glossy advertising mockup, not plastic-perfect symmetry. Dish: "${r.title}". Must match: ${iq}. Visible foods: ${ing}. ${filterBit} ${ingredientsBit} ${profileBit} Card ${slotIndex + 1} of 3 — ${slotHint} No people, hands, faces, text, logos, labels, or packaging.`;
   return body.slice(0, 3800);
 }
 
@@ -128,12 +146,13 @@ async function generateOpenAiRecipeHeroImage(
   profile: StoredProfile | null,
   pending: PendingRecipeSearch,
   recipe: MockRecipe,
+  slotIndex: number,
 ): Promise<string | null> {
   const key = process.env.EXPO_PUBLIC_OPENAI_API_KEY?.trim();
   if (!key) {
     return null;
   }
-  const prompt = buildDalleRecipeHeroPrompt(profile, pending, recipe);
+  const prompt = buildDalleRecipeHeroPrompt(profile, pending, recipe, slotIndex);
   try {
     const res = await fetch(OPENAI_IMAGES_URL, {
       method: 'POST',
@@ -170,6 +189,9 @@ async function generateOpenAiRecipeHeroImage(
   }
 }
 
+/** Recipe-card Unsplash: fewer results per request — we only need one good URL per dish. */
+const UNSPLASH_HERO_SEARCH_PER_PAGE = 12;
+
 async function resolveHeroFromUnsplash(
   r: MockRecipe,
   phrase: string,
@@ -181,8 +203,10 @@ async function resolveHeroFromUnsplash(
   }
   const iq = r.imageQuery?.trim() ?? '';
   const ing = ingSnippet(r);
+  const sub = r.subtitle?.trim() ?? '';
   const rawVariants = [
     iq ? `${iq} ${r.title}` : null,
+    sub ? `${r.title} ${sub} ${iq || ing}` : null,
     iq ? `${iq} cooked plated meal` : null,
     `${r.title} ${ing} plated dish`,
     `${phrase} plated meal`,
@@ -200,7 +224,7 @@ async function resolveHeroFromUnsplash(
   }
   for (const qv of queryVariants) {
     try {
-      const candidates = await fetchUnsplashSearchPhotoUrls(qv, 25);
+      const candidates = await fetchUnsplashSearchPhotoUrls(qv, UNSPLASH_HERO_SEARCH_PER_PAGE);
       for (const remote of candidates) {
         if (!used.has(remote)) {
           return remote;
@@ -228,6 +252,8 @@ const UNSPLASH_HUMAN_OR_PORTRAIT_RE =
   /\b(wom[ae]n|female|male|man|men|person|people|chef|chefs|cook|portrait|selfie|model|girl|boy|child|children|kid|kids|mother|father|parent|family|couple|smiling|laughing|waiter|waitress|bartender|homemaker|housewife)\b/i;
 const UNSPLASH_NON_DISH_SCENE_RE =
   /\b(grocery|supermarket|market shelf|\bmarket\b|shopping|\bcart\b|aisle|cashier|deli counter|farmers market|produce section|warehouse|factory|delivery|truck|office|wedding|gym|yoga|restaurant interior|dining room with people)\b/i;
+const UNSPLASH_NON_PHOTO_RE =
+  /\b(illustration|vector art|clip[\s-]?art|cartoon|anime|drawing|sketch|logo|icon set|3d render|cgi|infographic|wallpaper|pattern)\b/i;
 
 function unsplashMetaText(p: UnsplashPhotoMeta): string {
   return `${p.description ?? ''} ${p.alt_description ?? ''}`.trim();
@@ -245,13 +271,39 @@ function isAcceptableUnsplashFoodHit(p: UnsplashPhotoMeta): boolean {
   if (UNSPLASH_NON_DISH_SCENE_RE.test(t)) {
     return false;
   }
+  if (UNSPLASH_NON_PHOTO_RE.test(t)) {
+    return false;
+  }
   return true;
 }
 
-/** Steer search/random toward overhead plated food (not cooks, kitchens with people, or shops). */
+/** Prefer metadata that reads like real food photography (not ad/studio clichés). */
+const UNSPLASH_NATURAL_BOOST_RE =
+  /\b(natural light|daylight|sunlight|window light|golden hour|rustic|homemade|home[\s-]?cooked|comfort food|wooden table|ceramic plate|linen|cozy|simple|fresh|organic|candid|real food|country kitchen|farmhouse|editorial|documentary|film photo|35mm|dslr|iphone photo|dinner table|family meal|bistro|brunch table)\b/i;
+const UNSPLASH_ARTIFICIAL_PENALTY_RE =
+  /\b(commercial food|advertising|packshot|product shot|studio setup|white background|seamless|perfect symmetry|synthetic|ultra processed|fast food chain|buffet line|corporate catering|mockup|hyperreal|glossy render|neon|ai art|generative)\b/i;
+
+function unsplashNaturalRealismScore(p: UnsplashPhotoMeta): number {
+  const t = unsplashMetaText(p).toLowerCase();
+  let s = 0;
+  if (t.length > 12) {
+    s += 1;
+  }
+  if (UNSPLASH_NATURAL_BOOST_RE.test(t)) {
+    s += 4;
+  }
+  if (UNSPLASH_ARTIFICIAL_PENALTY_RE.test(t)) {
+    s -= 3;
+  }
+  return s;
+}
+
+/**
+ * Steer Unsplash toward finished dishes that look like natural food photos (not sterile studio styling).
+ */
 function dishOnlyUnsplashQuery(core: string): string {
   const hint =
-    'plated dish overhead table top view food styling single plate bowl meal studio culinary';
+    'authentic food photo natural window light plated dish rustic table editorial dinner shallow depth candid lifestyle';
   const merged = `${core.replace(/\s+/g, ' ').trim()} ${hint}`.replace(/\s+/g, ' ').trim();
   return merged.slice(0, 240);
 }
@@ -305,8 +357,7 @@ async function fetchUnsplashSearchPhotoUrlsOriented(
     return [];
   }
   const data = (await res.json()) as { results?: UnsplashPhotoMeta[] };
-  const withMeta: string[] = [];
-  const noMeta: string[] = [];
+  const scored: { url: string; score: number }[] = [];
   for (const row of data.results ?? []) {
     if (!isAcceptableUnsplashFoodHit(row)) {
       continue;
@@ -316,13 +367,14 @@ async function fetchUnsplashSearchPhotoUrlsOriented(
       continue;
     }
     const u = raw.trim();
+    let score = unsplashNaturalRealismScore(row);
     if (unsplashMetaText(row).length > 0) {
-      withMeta.push(u);
-    } else {
-      noMeta.push(u);
+      score += 1;
     }
+    scored.push({ url: u, score });
   }
-  return [...withMeta, ...noMeta];
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((x) => x.url);
 }
 
 /** Search: squarish first (flat-lay plates), then landscape if everything was filtered out. */
@@ -338,6 +390,103 @@ function pantryNoise(name: string): boolean {
   return /\b(salt|pepper|oil|water|stock|spice|herbs?)\b/i.test(name);
 }
 
+const VISUAL_SLOT_PLATING: readonly string[] = [
+  'cast iron skillet overhead',
+  'ceramic bowl linen napkin side angle',
+  'wide white plate rustic wood',
+  'shallow pasta bowl natural light',
+  'sheet pan dinner golden edges',
+];
+
+/** Extra search terms so sibling cards do not all pull the same stock look. */
+function buildVisualPlatingSuffix(r: MockRecipe, index: number): string {
+  const t = `${r.title} ${r.subtitle ?? ''} ${r.imageQuery ?? ''}`.toLowerCase();
+  const hints: string[] = [];
+  if (/\bskillet|fry pan|one[\s-]?pan\b/i.test(t)) {
+    hints.push('black skillet stovetop');
+  }
+  if (/\bbowl|rice bowl|grain\b/i.test(t)) {
+    hints.push('deep bowl overhead');
+  }
+  if (/\bstir[\s-]?fry|wok\b/i.test(t)) {
+    hints.push('wok saucy glossy');
+  }
+  if (/\b(bake|baked|sheet pan|oven)\b/i.test(t)) {
+    hints.push('baking dish roasted');
+  }
+  if (/\b(soup|stew)\b/i.test(t)) {
+    hints.push('soup bowl steam');
+  }
+  if (hints.length === 0) {
+    hints.push(VISUAL_SLOT_PLATING[index % VISUAL_SLOT_PLATING.length]);
+  }
+  return [...hints, VISUAL_SLOT_PLATING[index % VISUAL_SLOT_PLATING.length]].join(' ').replace(/\s+/g, ' ').trim();
+}
+
+const STOP_TOKENS = new Set(['and', 'with', 'the', 'for', 'from', 'quick', 'meal', 'meals', 'easy']);
+
+function tokenizeForOverlap(s: string): Set<string> {
+  return new Set(
+    s
+      .toLowerCase()
+      .split(/\W+/)
+      .filter((w) => w.length > 2 && !STOP_TOKENS.has(w)),
+  );
+}
+
+function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) {
+    return 0;
+  }
+  let inter = 0;
+  for (const x of a) {
+    if (b.has(x)) {
+      inter += 1;
+    }
+  }
+  const union = a.size + b.size - inter;
+  return union > 0 ? inter / union : 0;
+}
+
+/** True when two cards are likely to retrieve near-identical stock imagery. */
+function recipesLookTooSimilarForPhotos(a: MockRecipe, b: MockRecipe): boolean {
+  const ta = tokenizeForOverlap(`${a.title} ${a.imageQuery ?? ''} ${a.subtitle ?? ''}`);
+  const tb = tokenizeForOverlap(`${b.title} ${b.imageQuery ?? ''} ${b.subtitle ?? ''}`);
+  const jac = jaccardSimilarity(ta, tb);
+  if (jac >= 0.38) {
+    return true;
+  }
+  const ia = tokenizeForOverlap(a.ingredients.map((x) => x.name).join(' '));
+  const ib = tokenizeForOverlap(b.ingredients.map((x) => x.name).join(' '));
+  return jaccardSimilarity(ia, ib) >= 0.55 && jac >= 0.22;
+}
+
+/**
+ * Second pass: if the model returned three “pork potato carrot” siblings, nudge Unsplash with other URLs.
+ */
+async function diversifyCollidingHeroImages(recipes: MockRecipe[]): Promise<MockRecipe[]> {
+  if (!getUnsplashAccessKey() || recipes.length < 2) {
+    return recipes;
+  }
+  const out = recipes.map((r) => ({ ...r }));
+  for (let i = 0; i < out.length; i++) {
+    for (let j = 0; j < i; j++) {
+      if (!recipesLookTooSimilarForPhotos(out[i], out[j])) {
+        continue;
+      }
+      const used = new Set(
+        out.map((r) => r.heroImage?.trim()).filter((u): u is string => Boolean(u && /^https:\/\//i.test(u))),
+      );
+      const bumpPhrase = `${buildImageSearchPhrase(out[i], i)} ${buildVisualPlatingSuffix(out[i], i + 3)} alternate presentation`;
+      const alt = await resolveHeroFromUnsplash(out[i], bumpPhrase, used);
+      if (alt && isRenderableHeroUri(alt)) {
+        out[i] = { ...out[i], heroImage: alt, videoThumb: alt };
+      }
+    }
+  }
+  return out;
+}
+
 /** Phrase for Unsplash: lead with model imageQuery (dish-specific), then title + ingredients. */
 function buildImageSearchPhrase(r: MockRecipe, index: number): string {
   const ing = r.ingredients
@@ -346,8 +495,98 @@ function buildImageSearchPhrase(r: MockRecipe, index: number): string {
     .slice(0, 6)
     .join(' ');
   const iq = r.imageQuery?.trim() ?? '';
-  const parts = [iq, r.title, ing, `meal ${index + 1}`].filter((p) => p.length > 0);
+  const sub = r.subtitle?.trim() ?? '';
+  const plating = buildVisualPlatingSuffix(r, index);
+  const parts = [iq, r.title, sub, ing, plating, `dish ${index + 1}`].filter((p) => p.length > 0);
   return parts.join(' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+}
+
+function buildPendingHeroSearchQueries(pending: PendingRecipeSearch): string[] {
+  const ingredients = pending.ingredients
+    .map((s) => s.trim())
+    .filter((n) => n.length > 0 && !pantryNoise(n))
+    .slice(0, 8);
+  const ing = ingredients.join(' ');
+  const meal = pending.mealTypeLabel.trim();
+  const style = pending.cookingStyleLabel.trim();
+  const time = pending.cookingTimeLabel.trim();
+  const pseudoTitle = [meal, style].filter(Boolean).join(' ') || ing || 'meal';
+  const suffix = cookedDishSearchSuffix(pseudoTitle);
+
+  const combo = [ing, meal, style].filter(Boolean).join(' ');
+  const natural = 'natural light rustic table authentic food photography';
+  const rawVariants = [
+    ing ? `${ing} homemade ${meal || 'meal'} ${natural}` : null,
+    ing && meal ? `${ing} ${meal} ${suffix} ${natural}` : null,
+    ing ? `${ing} ${suffix} ${natural}` : null,
+    meal && ing ? `${meal} ${ing} cooked dish ${natural}` : null,
+    combo ? `${combo} ${suffix}` : null,
+    time && ing ? `${ing} ${time} home cooked ${natural}` : null,
+    ing ? `${ing} comfort food plate ${natural}` : null,
+    meal && !ing ? `${meal} food plated ${suffix} ${natural}` : null,
+  ].filter((x): x is string => Boolean(x?.trim()));
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const q of rawVariants) {
+    const k = q.trim().toLowerCase();
+    if (!seen.has(k)) {
+      seen.add(k);
+      out.push(q.trim());
+    }
+  }
+  return out;
+}
+
+/**
+ * Stock photo for the loading screen: matches pending ingredients + filters when Unsplash is configured,
+ * otherwise a deterministic pick from curated heroes (still varies with the search).
+ */
+const LOADING_HERO_UNSPLASH_PER_PAGE = 15;
+const LOADING_HERO_QUERY_PARALLEL = 3;
+
+export async function resolveLoadingHeroFromPendingSearch(pending: PendingRecipeSearch): Promise<string> {
+  if (getUnsplashAccessKey()) {
+    const queries = buildPendingHeroSearchQueries(pending);
+
+    const tryQuery = async (qv: string): Promise<string | null> => {
+      try {
+        const candidates = await fetchUnsplashSearchPhotoUrls(qv, LOADING_HERO_UNSPLASH_PER_PAGE);
+        const first = candidates[0];
+        if (first && isHttpsImageUrl(first)) {
+          return first.trim();
+        }
+        const remote = await fetchUnsplashFoodPhotoUrl(qv);
+        if (remote && isHttpsImageUrl(remote)) {
+          return remote.trim();
+        }
+      } catch {
+        /* next */
+      }
+      return null;
+    };
+
+    for (let i = 0; i < queries.length; i += LOADING_HERO_QUERY_PARALLEL) {
+      const batch = queries.slice(i, i + LOADING_HERO_QUERY_PARALLEL);
+      const hits = await Promise.all(batch.map((qv) => tryQuery(qv)));
+      for (let j = 0; j < hits.length; j++) {
+        const u = hits[j];
+        if (u) {
+          return u;
+        }
+      }
+    }
+  }
+
+  const seed = [
+    ...pending.ingredients,
+    pending.mealTypeLabel,
+    pending.cookingStyleLabel,
+    pending.cookingTimeLabel,
+  ].join('\0');
+  const pool = TRUSTED_RECIPE_HERO_URLS.length > 0 ? TRUSTED_RECIPE_HERO_URLS : FOOD_IMAGE_POOL;
+  const idx = hashSeed(seed) % pool.length;
+  return pool[idx] ?? FOOD_IMAGE_POOL[0];
 }
 
 type HeroImageContext = {
@@ -355,24 +594,46 @@ type HeroImageContext = {
   pending: PendingRecipeSearch;
 };
 
+/** After parallel hero fetches, ensure cards rarely share the same stock URL. */
+function dedupeHeroImagesAcrossRecipes(recipes: MockRecipe[]): MockRecipe[] {
+  const seen = new Set<string>();
+  const poolUsed = new Set<string>();
+  return recipes.map((r, i) => {
+    let hero = r.heroImage;
+    if (!isRenderableHeroUri(hero)) {
+      const h = pickUniquePoolImage(`${r.id}|blank`, i, poolUsed);
+      poolUsed.add(h);
+      return { ...r, heroImage: h, videoThumb: h };
+    }
+    const u = hero.trim();
+    if (seen.has(u)) {
+      const h = pickUniquePoolImage(`${r.id}|dedupe`, i, poolUsed);
+      poolUsed.add(h);
+      return { ...r, heroImage: h, videoThumb: h };
+    }
+    seen.add(u);
+    poolUsed.add(u);
+    return r;
+  });
+}
+
 /**
  * Resolves hero + video thumb: DALL·E 3 (optional) from profile + filters + ingredients, then Unsplash, then static pool.
+ * Recipes are processed in parallel so three DALL·E or Unsplash passes run concurrently instead of back-to-back.
  */
 async function resolveRecipeHeroImages(recipes: MockRecipe[], ctx: HeroImageContext): Promise<MockRecipe[]> {
-  const used = new Set<string>();
-  const out: MockRecipe[] = [];
   const mode = getRecipeHeroImageMode();
 
-  for (let i = 0; i < recipes.length; i++) {
-    const r = recipes[i];
+  const resolveOne = async (r: MockRecipe, i: number): Promise<MockRecipe> => {
     const phrase = buildImageSearchPhrase(r, i);
+    const usedLocal = new Set<string>();
     let hero: string | null = null;
 
     const tryDalle = async (): Promise<string | null> => {
       if (mode === 'unsplash_only') {
         return null;
       }
-      const g = await generateOpenAiRecipeHeroImage(ctx.profile, ctx.pending, r);
+      const g = await generateOpenAiRecipeHeroImage(ctx.profile, ctx.pending, r, i);
       return g && isRenderableHeroUri(g) ? g : null;
     };
 
@@ -380,46 +641,48 @@ async function resolveRecipeHeroImages(recipes: MockRecipe[], ctx: HeroImageCont
       if (mode === 'generated_only') {
         return null;
       }
-      return resolveHeroFromUnsplash(r, phrase, used);
+      return resolveHeroFromUnsplash(r, phrase, usedLocal);
     };
 
     if (mode === 'generated_first' || mode === 'generated_only') {
       hero = await tryDalle();
       if (hero) {
-        used.add(hero);
+        usedLocal.add(hero);
       }
       if (!hero && mode === 'generated_first') {
         hero = await tryUnsplash();
         if (hero) {
-          used.add(hero);
+          usedLocal.add(hero);
         }
       }
     } else if (mode === 'unsplash_first') {
       hero = await tryUnsplash();
       if (hero) {
-        used.add(hero);
+        usedLocal.add(hero);
       }
       if (!hero) {
         hero = await tryDalle();
         if (hero) {
-          used.add(hero);
+          usedLocal.add(hero);
         }
       }
     } else {
       hero = await tryUnsplash();
       if (hero) {
-        used.add(hero);
+        usedLocal.add(hero);
       }
     }
 
     if (!isRenderableHeroUri(hero)) {
-      hero = pickUniquePoolImage(`${r.id}|${phrase}`, i, used);
+      hero = pickUniquePoolImage(`${r.id}|${phrase}`, i, usedLocal);
     }
 
-    out.push({ ...r, heroImage: hero, videoThumb: hero });
-  }
+    return { ...r, heroImage: hero, videoThumb: hero };
+  };
 
-  return out;
+  const resolved = await Promise.all(recipes.map((r, i) => resolveOne(r, i)));
+  const deduped = dedupeHeroImagesAcrossRecipes(resolved);
+  return diversifyCollidingHeroImages(deduped);
 }
 
 function ingSnippet(r: MockRecipe): string {
@@ -491,11 +754,12 @@ Hard rules:
 - Obey USER PROFILE allergies and dietary preference — never include allergens or forbidden foods.
 - Obey the FILTER CONSTRAINTS block literally (meal type, time band, cooking style, ingredients).
 - Recipe titles and ingredient lists must describe the same dish — no random unrelated cuisines.
-- Every recipe must include imageQuery: English keywords for ONE finished plated dish only — what the eater sees on the plate or in the bowl (e.g. sausage slices, mushrooms, skillet sauce, noodles). FORBIDDEN in imageQuery: any person, face, hand, chef, home cook, portrait, grocery store, market aisle, shopping, raw produce display, kitchen scene with humans, or "making/cooking" action — only the cooked meal as served.
+- Every recipe must include imageQuery: English keywords for ONE finished plated dish only — what the eater sees on the plate or in the bowl (e.g. sausage slices, mushrooms, skillet sauce, noodles). Phrase it the way a real food photographer would tag a natural lifestyle shot (home table, daylight, rustic plate) — not sterile ad words. FORBIDDEN in imageQuery: any person, face, hand, chef, home cook, portrait, grocery store, market aisle, shopping, raw produce display, kitchen scene with humans, or "making/cooking" action — only the cooked meal as served.
 - Do NOT use concepts like buffet, salad bar, mezze spread, grazing board, or multi-compartment platter.
 - imageQuery MUST repeat the main proteins, starches, and vegetables from the title and ingredient list (e.g. mushroom pork stir-fry → include mushroom, pork, stir fry; beef sausage → beef, sausage). Wrong foods in imageQuery cause wrong stock photos — be literal.
 - Protein consistency: if the title names a specific meat or main protein (chicken, beef, pork, fish, tofu, etc.), imageQuery and ingredients must use that same protein — never substitute a different animal (e.g. chicken stir-fry must not use beef or pork as the hero protein in text or keywords).
-- tutorialSearchQuery must describe the same dish as title and ingredients so a video search finds matching tutorials (not a generic or unrelated dish).
+- tutorialSearchQuery must describe the same dish as title and ingredients so a YouTube search finds that exact preparation — include the most specific words from the title (e.g. "skillet", "stir fry", "bowl") plus 2–4 main foods; do not reuse one generic phrase for all three recipes.
+- VISUAL DIVERSITY (mandatory): The 3 recipes must be obviously different meals — not three rewordings of the same pork-and-potato idea. Vary cooking format (skillet vs bowl vs wok/sheet-pan/soup), highlight different secondary vegetables or starches where possible, and give each imageQuery a different serving vessel / angle so stock photos do not look like clones.
 - When the user listed ingredients, imageQuery MUST name the main visible foods (e.g. chicken, cucumber) plus the dish format (salad bowl, lettuce wrap, stir-fry on rice).
 - Pantry staples allowed in addition to listed ingredients: oil, salt, pepper, common dried herbs, garlic, onion, lemon, basic spices, water, stock cubes.
 - Use clear amounts and numbered steps.
@@ -578,6 +842,8 @@ function buildUserPrompt(
 FILTER CONSTRAINTS:
 ${constraints}
 ${exclude}
+VISUAL & VIDEO DIVERSITY — mandatory: The three recipes must read and look like three different dinners (different titles, different imageQuery vessel/format, different tutorialSearchQuery). If ingredients overlap, differentiate with cooking technique and presentation (e.g. one-pan hash vs rice bowl vs glazed roast).
+
 Return a JSON object with key "recipes" containing exactly 3 recipes. Each recipe must have:
 - id: unique string, lowercase letters numbers and hyphens only (e.g. "lemon-herb-chicken-skillet")
 - title: short appetizing title
@@ -591,8 +857,8 @@ Return a JSON object with key "recipes" containing exactly 3 recipes. Each recip
 - familyTip: one practical sentence
 - steps: array of 3-5 items with "n" ("01","02",...), "title", "body" (2-4 sentences)
 - nutrition: array of 3-5 { "label", "value" } e.g. Protein / Carbs / Fats / Fiber
-- imageQuery: 5–12 keywords: the cooked dish on a plate or in a bowl only (overhead or close-up food). No people, hands, chefs, kitchens with humans, groceries, or market scenes. No buffet / bar / spread. Must align with title and ingredients; include user’s key ingredients when provided in FILTER CONSTRAINTS.
-- tutorialSearchQuery: one line (8–18 words) to find a YouTube cooking video for THIS EXACT DISH — include the dish as in title plus 2–4 main ingredient names (e.g. chicken, cucumber) and words like "recipe" or "how to cook". Must not describe a different meal than title + ingredients.
+- imageQuery: 5–12 keywords: the cooked dish on a plate or in a bowl only (overhead or close-up food). Prefer wording that matches real documentary food photos (e.g. natural light, wooden table, ceramic bowl) — avoid “perfect studio” or generic stock clichés. No people, hands, chefs, kitchens with humans, groceries, or market scenes. No buffet / bar / spread. Must align with title and ingredients; include user’s key ingredients when provided in FILTER CONSTRAINTS.
+- tutorialSearchQuery: one line (8–20 words) tailored to THIS recipe only — copy the dish style from the title (skillet, stir-fry, bowl, baked, etc.) plus 2–4 main ingredient names and "recipe" or "how to cook". Must uniquely match this card on YouTube, not a copy-paste shared across the three recipes.
 
 Do not include heroImage URLs.`;
 }
@@ -839,7 +1105,8 @@ export async function generateRecipesFromContext(
     if (top.length === 0) {
       return [];
     }
-    return resolveRecipeHeroImages(top, { profile, pending });
+    const withHeroes = await resolveRecipeHeroImages(top, { profile, pending });
+    return attachYoutubeVideoThumbnailsToRecipes(withHeroes);
   };
 
   if (getOpenAiKey()) {

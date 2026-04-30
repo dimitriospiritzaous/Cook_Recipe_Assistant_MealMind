@@ -1,5 +1,4 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -34,6 +33,9 @@ import { takePendingScanIngredients } from '@/lib/scan-session';
 
 /** ~Tailwind `max-w-2xl` from home mock. */
 const CONTENT_MAX = 672;
+
+/** GlowButton gradient uses `paddingVertical: MealMindSpace.md + 4` + ~18px label line height. */
+const FIND_MEAL_CTA_HEIGHT = MealMindSpace.md + 4 + MealMindSpace.md + 4 + 18;
 
 const RECENT_INITIAL_COUNT = 4;
 const RECENT_REVEAL_STEP = 3;
@@ -76,7 +78,6 @@ function formatLastUsed(iso: string): string {
 export default function HomeScreen() {
   const router = useRouter();
   const { explore } = useLocalSearchParams<{ explore?: string | string[] }>();
-  const tabBarHeight = useBottomTabBarHeight();
   const [ingredientsInput, setIngredientsInput] = useState('');
   const [timeId, setTimeId] = useState<string | null>('15');
   const [mealTypeId, setMealTypeId] = useState<string | null>('breakfast');
@@ -207,8 +208,6 @@ export default function HomeScreen() {
     ]);
   };
 
-  const fabBottom = Math.max(tabBarHeight, 52) + MealMindSpace.xs;
-
   const onFindMyMeal = () => {
     const ingredients = ingredientsInput
       .split(',')
@@ -225,6 +224,9 @@ export default function HomeScreen() {
     }).then(() => router.push('/loading'));
   };
 
+  const scrollBottomPad =
+    FIND_MEAL_CTA_HEIGHT + MealMindSpace.sm + MealMindSpace.sm + MealMindSpace.md;
+
   return (
     <MealMindScreen scroll={false} contentBottomInset={0} showFooter={false}>
       <View style={styles.shell}>
@@ -236,135 +238,134 @@ export default function HomeScreen() {
           <ProfileMenuButton />
         </View>
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: fabBottom + 72 }]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <View style={styles.formMax}>
-            <View style={styles.hero}>
-              <Text style={styles.headline}>What should we cook today?</Text>
-              <Text style={styles.subhead}>Add ingredients and we’ll pick meals your family will love.</Text>
-            </View>
-
-            <View style={styles.searchRow}>
-              <MaterialIcons name="search" size={22} color={MealMindColors.outline} />
-              <TextInput
-                value={ingredientsInput}
-                onChangeText={setIngredientsInput}
-                placeholder="Enter ingredients (e.g. Chicken, Spinach)"
-                placeholderTextColor={MealMindColors.outlineVariant}
-                style={styles.searchInput}
-              />
-              <View style={styles.inputActions}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Add from photo"
-                  onPress={openIngredientScan}
-                  style={({ pressed }) => [styles.iconRound, pressed && styles.pressed]}>
-                  <MaterialIcons name="photo-camera" size={20} color={MealMindColors.primary} />
-                </Pressable>
+        <View style={styles.body}>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPad }]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            <View style={styles.formMax}>
+              <View style={styles.hero}>
+                <Text style={styles.headline}>What should we cook today?</Text>
+                <Text style={styles.subhead}>Add ingredients and we’ll pick meals your family will love.</Text>
               </View>
-            </View>
 
-            <View style={styles.filters}>
-              <ChipRow
-                sectionLabel="Meal Type"
-                chips={MEAL_TYPE_CHIPS}
-                selectedId={mealTypeId}
-                onSelect={setMealTypeId}
-                edgeBleed
-              />
-              <ChipRow
-                sectionLabel="Cooking Style"
-                chips={COOKING_STYLE_CHIPS}
-                selectedId={cookingStyleId}
-                onSelect={(id) => setCookingStyleId((prev) => (prev === id ? null : id))}
-                edgeBleed
-              />
-              <ChipRow
-                sectionLabel="Cooking Time"
-                chips={COOKING_TIME_CHIPS}
-                selectedId={timeId}
-                onSelect={setTimeId}
-                edgeBleed
-              />
-            </View>
-
-            <View style={styles.historySection}>
-              <View style={styles.historyHeader}>
-                <View>
-                  <Text style={styles.historyTitle}>Recent Ingredients</Text>
-                  <Text style={styles.historySub}>Tap + to add to your list</Text>
+              <View style={styles.searchRow}>
+                <MaterialIcons name="search" size={22} color={MealMindColors.outline} />
+                <TextInput
+                  value={ingredientsInput}
+                  onChangeText={setIngredientsInput}
+                  placeholder="Enter ingredients (e.g. Chicken, Spinach)"
+                  placeholderTextColor={MealMindColors.outlineVariant}
+                  style={styles.searchInput}
+                />
+                <View style={styles.inputActions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Add from photo"
+                    onPress={openIngredientScan}
+                    style={({ pressed }) => [styles.iconRound, pressed && styles.pressed]}>
+                    <MaterialIcons name="photo-camera" size={20} color={MealMindColors.primary} />
+                  </Pressable>
                 </View>
               </View>
 
-              <View style={styles.recentList}>
-                {visibleRecent.map((item, idx) => (
-                  <View
-                    key={item.name}
-                    style={[styles.recentRow, idx === visibleRecent.length - 1 && styles.recentRowLast]}>
-                    <View style={styles.recentRowLeft}>
-                      <View style={styles.recentBullet}>
-                        <MaterialIcons name="restaurant" size={16} color={MealMindColors.onSecondaryContainer} />
-                      </View>
-                      <View style={styles.recentTextWrap}>
-                        <Text style={styles.recentName}>{item.name}</Text>
-                        <Text style={styles.recentDate}>{formatLastUsed(item.lastUsedAt)}</Text>
-                      </View>
-                    </View>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Add ${item.name} to ingredients`}
-                      onPress={() => appendIngredient(item.name)}
-                      hitSlop={8}
-                      style={({ pressed }) => [styles.addBtn, pressed && styles.pressed]}>
-                      <MaterialIcons name="add" size={20} color={MealMindColors.primary} />
-                    </Pressable>
+              <View style={styles.filters}>
+                <ChipRow
+                  sectionLabel="Meal Type"
+                  chips={MEAL_TYPE_CHIPS}
+                  selectedId={mealTypeId}
+                  onSelect={setMealTypeId}
+                  edgeBleed
+                />
+                <ChipRow
+                  sectionLabel="Cooking Style"
+                  chips={COOKING_STYLE_CHIPS}
+                  selectedId={cookingStyleId}
+                  onSelect={(id) => setCookingStyleId((prev) => (prev === id ? null : id))}
+                  edgeBleed
+                />
+                <ChipRow
+                  sectionLabel="Cooking Time"
+                  chips={COOKING_TIME_CHIPS}
+                  selectedId={timeId}
+                  onSelect={setTimeId}
+                  edgeBleed
+                />
+              </View>
+
+              <View style={styles.historySection}>
+                <View style={styles.historyHeader}>
+                  <View>
+                    <Text style={styles.historyTitle}>Recent Ingredients</Text>
+                    <Text style={styles.historySub}>Tap + to add to your list</Text>
                   </View>
-                ))}
+                </View>
+
+                <View style={styles.recentList}>
+                  {visibleRecent.map((item, idx) => (
+                    <View
+                      key={item.name}
+                      style={[styles.recentRow, idx === visibleRecent.length - 1 && styles.recentRowLast]}>
+                      <View style={styles.recentRowLeft}>
+                        <View style={styles.recentBullet}>
+                          <MaterialIcons name="restaurant" size={16} color={MealMindColors.onSecondaryContainer} />
+                        </View>
+                        <View style={styles.recentTextWrap}>
+                          <Text style={styles.recentName}>{item.name}</Text>
+                          <Text style={styles.recentDate}>{formatLastUsed(item.lastUsedAt)}</Text>
+                        </View>
+                      </View>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Add ${item.name} to ingredients`}
+                        onPress={() => appendIngredient(item.name)}
+                        hitSlop={8}
+                        style={({ pressed }) => [styles.addBtn, pressed && styles.pressed]}>
+                        <MaterialIcons name="add" size={20} color={MealMindColors.primary} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+
+                {canShowMoreRecent ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="View more recent ingredients"
+                    onPress={showMoreRecent}
+                    style={({ pressed }) => [styles.viewMoreCard, pressed && styles.pressed]}>
+                    <MaterialIcons name="expand-more" size={20} color={MealMindColors.primary} />
+                    <Text style={styles.viewMoreText}>View Full History</Text>
+                  </Pressable>
+                ) : null}
               </View>
 
-              {canShowMoreRecent ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="View more recent ingredients"
-                  onPress={showMoreRecent}
-                  style={({ pressed }) => [styles.viewMoreCard, pressed && styles.pressed]}>
-                  <MaterialIcons name="expand-more" size={20} color={MealMindColors.primary} />
-                  <Text style={styles.viewMoreText}>View Full History</Text>
-                </Pressable>
-              ) : null}
+              <View style={styles.recommendWrap}>
+                <Image
+                  source={{ uri: HEALTH_BANNER_IMAGE }}
+                  style={styles.recommendImage}
+                  contentFit="cover"
+                  accessibilityLabel="Healthy eating banner with fresh produce"
+                />
+                <View style={styles.recommendOverlay} pointerEvents="none" />
+                <View style={styles.recommendContent}>
+                  <Text style={styles.recommendBadge}>EAT WELL</Text>
+                  <Text style={styles.recommendTitle}>Healthy meals, your way</Text>
+                  <Text style={styles.recommendBody}>Cook clean, balanced dishes from what you have.</Text>
+                </View>
+              </View>
             </View>
+          </ScrollView>
 
-            <View style={styles.recommendWrap}>
-              <Image
-                source={{ uri: HEALTH_BANNER_IMAGE }}
-                style={styles.recommendImage}
-                contentFit="cover"
-                accessibilityLabel="Healthy eating banner with fresh produce"
+          <View style={styles.ctaBar}>
+            <View style={styles.ctaInner}>
+              <GlowButton
+                label="Find My Meal"
+                trailing={<MaterialIcons name="restaurant-menu" size={22} color={MealMindColors.onPrimary} />}
+                style={styles.ctaButton}
+                onPress={onFindMyMeal}
               />
-              <View style={styles.recommendOverlay} pointerEvents="none" />
-              <View style={styles.recommendContent}>
-                <Text style={styles.recommendBadge}>EAT WELL</Text>
-                <Text style={styles.recommendTitle}>Healthy meals, your way</Text>
-                <Text style={styles.recommendBody}>Cook clean, balanced dishes from what you have.</Text>
-              </View>
             </View>
-          </View>
-        </ScrollView>
-
-        {/* Full-area overlay so `flex-end` pins the CTA above the tab bar on web + native. */}
-        <View
-          pointerEvents="box-none"
-          style={[StyleSheet.absoluteFillObject, styles.fabOverlay, { paddingBottom: fabBottom }]}>
-          <View style={styles.fabInner}>
-            <GlowButton
-              label="Find My Meal"
-              trailing={<MaterialIcons name="restaurant-menu" size={22} color={MealMindColors.onPrimary} />}
-              style={styles.fabButton}
-              onPress={onFindMyMeal}
-            />
           </View>
         </View>
       </View>
@@ -376,6 +377,10 @@ const styles = StyleSheet.create({
   shell: {
     flex: 1,
     backgroundColor: MealMindColors.surface,
+  },
+  body: {
+    flex: 1,
+    minHeight: 0,
   },
   topBar: {
     flexDirection: 'row',
@@ -409,10 +414,12 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+    minHeight: 0,
   },
   scrollContent: {
     paddingHorizontal: MealMindSpace.lg,
     paddingTop: MealMindSpace.lg,
+    flexGrow: 1,
   },
   formMax: {
     maxWidth: CONTENT_MAX,
@@ -571,7 +578,7 @@ const styles = StyleSheet.create({
     color: MealMindColors.primary,
   },
   recommendWrap: {
-    height: 256,
+    height: 200,
     borderRadius: MealMindRadii.md,
     overflow: 'hidden',
     position: 'relative',
@@ -587,7 +594,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: MealMindSpace.lg,
     right: MealMindSpace.lg,
-    bottom: MealMindSpace.lg,
+    bottom: MealMindSpace.md,
   },
   recommendBadge: {
     alignSelf: 'flex-start',
@@ -603,27 +610,30 @@ const styles = StyleSheet.create({
   recommendTitle: {
     marginTop: MealMindSpace.sm,
     fontFamily: MealMindFonts.headlineExtraBold,
-    fontSize: 28,
+    fontSize: 22,
+    lineHeight: 26,
     color: '#FFFFFF',
   },
   recommendBody: {
     marginTop: 4,
     fontFamily: MealMindFonts.body,
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 18,
     color: 'rgba(255,255,255,0.85)',
   },
-  fabOverlay: {
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+  ctaBar: {
+    paddingTop: MealMindSpace.sm,
+    paddingBottom: MealMindSpace.sm,
     paddingHorizontal: MealMindSpace.lg,
-    zIndex: 20,
+    backgroundColor: MealMindColors.surface,
+    alignItems: 'center',
   },
-  fabInner: {
+  ctaInner: {
     width: '100%',
     maxWidth: CONTENT_MAX,
     alignItems: 'stretch',
   },
-  fabButton: {
+  ctaButton: {
     alignSelf: 'stretch',
   },
 });

@@ -16,6 +16,8 @@ type Props = {
   useNeutralFallbacks?: boolean;
   /** Recipe id (or similar) so expo-image does not recycle the wrong bitmap across list rows. */
   stableKey?: string;
+  /** Fires when the current source finishes loading (including after an automatic fallback swap). */
+  onLoad?: () => void;
 };
 
 /**
@@ -27,6 +29,7 @@ export function FallbackRecipeImage({
   contentFit = 'cover',
   useNeutralFallbacks = false,
   stableKey,
+  onLoad,
 }: Props) {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -62,6 +65,7 @@ export function FallbackRecipeImage({
       style={style}
       contentFit={contentFit}
       cachePolicy="memory-disk"
+      onLoad={() => onLoad?.()}
       onError={() => setAttempt((a) => (a + 1 < chain.length ? a + 1 : a))}
     />
   );

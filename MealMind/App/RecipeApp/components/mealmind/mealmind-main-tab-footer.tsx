@@ -150,7 +150,7 @@ function TabSlot({ tab, focused, onPress }: { tab: TabItem; focused: boolean; on
 
 const styles = StyleSheet.create({
   bar: {
-    backgroundColor: MealMindColors.surfaceContainerLow,
+    backgroundColor: MealMindColors.surface,
     paddingTop: MealMindSpace.sm,
     borderTopLeftRadius: MealMindRadii.xl,
     borderTopRightRadius: MealMindRadii.xl,

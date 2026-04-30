@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AuthSplitLayout } from '@/components/mealmind/auth-split-layout';
@@ -10,11 +10,8 @@ import { SIGNIN_HERO_IMAGE } from '@/constants/auth-assets';
 import { MealMindColors } from '@/constants/mealmind-colors';
 import { MealMindRadii, MealMindSpace } from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
-import { showAuthSuccessToast } from '@/lib/mealmind-toast';
-import { syncFlowGateBeforeTabs } from '@/lib/flow-gate';
-import { getIntroSeen, getOnboardingComplete, hydrateLocalFlagsFromRemoteProfile } from '@/lib/profile-storage';
-import { signInWithEmail } from '@/lib/supabase-auth';
-import { fetchMealMindProfile } from '@/lib/supabase-profile';
+import { navigateAfterSuccessfulAuth } from '@/lib/auth-after-signin';
+import { signInWithEmail, signInWithOAuthProvider } from '@/lib/supabase-auth';
 
 const FORM_MAX_WIDTH = 480;
 const OUTLINE_BORDER = `${MealMindColors.outlineVariant}26`;
@@ -30,6 +27,7 @@ export default function SignInScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [oauthBusy, setOauthBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = useCallback(async () => {
@@ -47,25 +45,7 @@ export default function SignInScreen() {
     setSubmitting(true);
     try {
       await signInWithEmail(e, password);
-      const remote = await fetchMealMindProfile();
-      if (remote) {
-        await hydrateLocalFlagsFromRemoteProfile(remote);
-      }
-      const onboardingDone = await getOnboardingComplete();
-      if (onboardingDone) {
-        showAuthSuccessToast('Signed in', 'Welcome back.');
-        router.replace('/(tabs)');
-        return;
-      }
-      const introSeen = await getIntroSeen();
-      if (!introSeen) {
-        showAuthSuccessToast('Signed in', "Let's personalize MealMind.");
-        router.replace('/intro');
-        return;
-      }
-      await syncFlowGateBeforeTabs();
-      showAuthSuccessToast('Signed in', "Let's personalize MealMind.");
-      router.replace('/(tabs)');
+      await navigateAfterSuccessfulAuth(router);
     } catch (err) {
       if (err instanceof Error) setError(err.message);
       else setError('Something went wrong. Please try again.');
@@ -78,12 +58,25 @@ export default function SignInScreen() {
     router.replace('/signup');
   }, [router]);
 
-  const onOAuthStub = useCallback((provider: string) => {
-    Alert.alert(
-      'OAuth setup',
-      `Enable ${provider} in the Supabase dashboard, then add the redirect URL and optional expo-auth-session flow.`,
-    );
-  }, []);
+  const onOAuth = useCallback(
+    async (provider: 'google' | 'apple') => {
+      setError(null);
+      setOauthBusy(true);
+      try {
+        await signInWithOAuthProvider(provider);
+        await navigateAfterSuccessfulAuth(router);
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('Something went wrong. Please try again.');
+        }
+      } finally {
+        setOauthBusy(false);
+      }
+    },
+    [router],
+  );
 
   const stickyBottomPad = insets.bottom + MealMindSpace.lg;
 
@@ -176,16 +169,26 @@ export default function SignInScreen() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Continue with Google"
-                style={({ pressed }) => [styles.oauthBtn, pressed && styles.pressed]}
-                onPress={() => onOAuthStub('Google')}>
+                disabled={submitting || oauthBusy}
+                style={({ pressed }) => [
+                  styles.oauthBtn,
+                  pressed && styles.pressed,
+                  (submitting || oauthBusy) && styles.oauthBtnDisabled,
+                ]}
+                onPress={() => void onOAuth('google')}>
                 <GoogleLogo size={22} />
                 <Text style={styles.oauthBtnText}>Google</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Continue with Apple"
-                style={({ pressed }) => [styles.oauthBtn, pressed && styles.pressed]}
-                onPress={() => onOAuthStub('Apple')}>
+                disabled={submitting || oauthBusy}
+                style={({ pressed }) => [
+                  styles.oauthBtn,
+                  pressed && styles.pressed,
+                  (submitting || oauthBusy) && styles.oauthBtnDisabled,
+                ]}
+                onPress={() => void onOAuth('apple')}>
                 <AppleLogo size={22} color={MealMindColors.onSurface} />
                 <Text style={styles.oauthBtnText}>Apple</Text>
               </Pressable>
@@ -203,9 +206,9 @@ export default function SignInScreen() {
       <View style={[styles.stickyBottom, { paddingBottom: stickyBottomPad }]}>
         <View style={styles.stickyInner}>
           <GlowButton
-            label={submitting ? 'Signing in…' : 'Sign in'}
+            label={submitting ? 'Signing in…' : oauthBusy ? 'Opening browser…' : 'Sign in'}
             trailing={<MaterialIcons name="arrow-forward" size={22} color={MealMindColors.onPrimary} />}
-            disabled={submitting}
+            disabled={submitting || oauthBusy}
             onPress={() => void onSubmit()}
           />
         </View>
@@ -325,6 +328,9 @@ const styles = StyleSheet.create({
     paddingVertical: MealMindSpace.md + 4,
     borderRadius: MealMindRadii.full,
     backgroundColor: MealMindColors.surfaceContainer,
+  },
+  oauthBtnDisabled: {
+    opacity: 0.55,
   },
   oauthBtnText: { fontFamily: MealMindFonts.labelSemibold, fontSize: 14, color: MealMindColors.onSurface },
   footerCopy: { marginTop: 32, alignItems: 'center' },

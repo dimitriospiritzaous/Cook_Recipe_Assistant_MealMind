@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Platform,
   Pressable,
@@ -23,8 +22,9 @@ import { MealMindRadii, MealMindShadow, MealMindSpace } from '@/constants/mealmi
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
 import { getCountryLabel, getCountryPickerItems } from '@/lib/country-picker-data';
 import { detectCountryCodeFromDevice } from '@/lib/detect-country-from-location';
+import { navigateAfterSuccessfulAuth } from '@/lib/auth-after-signin';
 import { showAuthSuccessToast } from '@/lib/mealmind-toast';
-import { signUpWithEmail } from '@/lib/supabase-auth';
+import { signInWithOAuthProvider, signUpWithEmail } from '@/lib/supabase-auth';
 
 const FORM_MAX_WIDTH = 480;
 const OUTLINE_BORDER = `${MealMindColors.outlineVariant}26`;
@@ -42,6 +42,7 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [oauthBusy, setOauthBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [countryModalOpen, setCountryModalOpen] = useState(false);
@@ -123,12 +124,25 @@ export default function SignUpScreen() {
     router.replace('/signin');
   }, [router]);
 
-  const onOAuthStub = useCallback((provider: string) => {
-    Alert.alert(
-      'OAuth setup',
-      `Enable ${provider} in the Supabase dashboard (Authentication → Providers), then wire expo-auth-session if you want native OAuth.`,
-    );
-  }, []);
+  const onOAuth = useCallback(
+    async (provider: 'google' | 'apple') => {
+      setError(null);
+      setOauthBusy(true);
+      try {
+        await signInWithOAuthProvider(provider);
+        await navigateAfterSuccessfulAuth(router);
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('Something went wrong. Please try again.');
+        }
+      } finally {
+        setOauthBusy(false);
+      }
+    },
+    [router],
+  );
 
   const stickyBottomPad = insets.bottom + MealMindSpace.lg;
 
@@ -278,16 +292,26 @@ export default function SignUpScreen() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Continue with Google"
-                style={({ pressed }) => [styles.oauthBtn, pressed && styles.pressed]}
-                onPress={() => onOAuthStub('Google')}>
+                disabled={submitting || oauthBusy}
+                style={({ pressed }) => [
+                  styles.oauthBtn,
+                  pressed && styles.pressed,
+                  (submitting || oauthBusy) && styles.oauthBtnDisabled,
+                ]}
+                onPress={() => void onOAuth('google')}>
                 <GoogleLogo size={22} />
                 <Text style={styles.oauthBtnText}>Google</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Continue with Apple"
-                style={({ pressed }) => [styles.oauthBtn, pressed && styles.pressed]}
-                onPress={() => onOAuthStub('Apple')}>
+                disabled={submitting || oauthBusy}
+                style={({ pressed }) => [
+                  styles.oauthBtn,
+                  pressed && styles.pressed,
+                  (submitting || oauthBusy) && styles.oauthBtnDisabled,
+                ]}
+                onPress={() => void onOAuth('apple')}>
                 <AppleLogo size={22} color={MealMindColors.onSurface} />
                 <Text style={styles.oauthBtnText}>Apple</Text>
               </Pressable>
@@ -305,9 +329,9 @@ export default function SignUpScreen() {
       <View style={[styles.stickyBottom, { paddingBottom: stickyBottomPad }]}>
         <View style={styles.stickyInner}>
           <GlowButton
-            label={submitting ? 'Creating…' : 'Create account'}
+            label={submitting ? 'Creating…' : oauthBusy ? 'Opening browser…' : 'Create account'}
             trailing={<MaterialIcons name="arrow-forward" size={22} color={MealMindColors.onPrimary} />}
-            disabled={submitting}
+            disabled={submitting || oauthBusy}
             onPress={() => void onSubmit()}
           />
         </View>
@@ -501,6 +525,7 @@ const styles = StyleSheet.create({
     borderRadius: MealMindRadii.full,
     backgroundColor: MealMindColors.surfaceContainer,
   },
+  oauthBtnDisabled: { opacity: 0.55 },
   oauthBtnText: { fontFamily: MealMindFonts.labelSemibold, fontSize: 14, color: MealMindColors.onSurface },
   footerCopy: { marginTop: 32, alignItems: 'center' },
   footerText: { fontFamily: MealMindFonts.body, fontSize: 14, color: MealMindColors.onSurfaceVariant },

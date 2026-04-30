@@ -67,7 +67,7 @@ export function showSuccessToast(text1: string, text2?: string): void {
     type: 'success',
     text1,
     text2,
-    visibilityTime: 2200,
+    visibilityTime: 2600,
     topOffset: 56,
   });
 }
