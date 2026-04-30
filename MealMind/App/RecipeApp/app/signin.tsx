@@ -11,12 +11,8 @@ import { MealMindColors } from '@/constants/mealmind-colors';
 import { MealMindRadii, MealMindSpace } from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
 import { showAuthSuccessToast } from '@/lib/mealmind-toast';
-import {
-  getGetStartedSeen,
-  getIntroSeen,
-  getOnboardingComplete,
-  hydrateLocalFlagsFromRemoteProfile,
-} from '@/lib/profile-storage';
+import { syncFlowGateBeforeTabs } from '@/lib/flow-gate';
+import { getIntroSeen, getOnboardingComplete, hydrateLocalFlagsFromRemoteProfile } from '@/lib/profile-storage';
 import { signInWithEmail } from '@/lib/supabase-auth';
 import { fetchMealMindProfile } from '@/lib/supabase-profile';
 
@@ -67,9 +63,9 @@ export default function SignInScreen() {
         router.replace('/intro');
         return;
       }
-      const started = await getGetStartedSeen();
+      await syncFlowGateBeforeTabs();
       showAuthSuccessToast('Signed in', "Let's personalize MealMind.");
-      router.replace(!started ? '/get-started' : '/(tabs)');
+      router.replace('/(tabs)');
     } catch (err) {
       if (err instanceof Error) setError(err.message);
       else setError('Something went wrong. Please try again.');

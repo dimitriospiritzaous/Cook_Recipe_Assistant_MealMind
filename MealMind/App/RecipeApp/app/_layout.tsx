@@ -59,7 +59,6 @@ export default function RootLayout() {
           <Stack.Screen name="signup" options={{ headerShown: false, presentation: 'card' }} />
           <Stack.Screen name="signin" options={{ headerShown: false, presentation: 'card' }} />
           <Stack.Screen name="intro" options={{ headerShown: false, presentation: 'card' }} />
-          <Stack.Screen name="get-started" options={{ headerShown: false, presentation: 'card' }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="loading" options={{ headerShown: false, presentation: 'card' }} />
           <Stack.Screen name="scan" options={{ headerShown: false, presentation: 'fullScreenModal' }} />

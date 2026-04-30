@@ -3,20 +3,15 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { MealMindColors } from '@/constants/mealmind-colors';
-import {
-  getGetStartedSeen,
-  getIntroSeen,
-  getOnboardingComplete,
-  hydrateLocalFlagsFromRemoteProfile,
-  setOnboardingComplete,
-} from '@/lib/profile-storage';
+import { syncFlowGateBeforeTabs } from '@/lib/flow-gate';
+import { getIntroSeen, getOnboardingComplete, hydrateLocalFlagsFromRemoteProfile } from '@/lib/profile-storage';
 import { getSupabaseSession } from '@/lib/supabase-auth';
 import { fetchMealMindProfile } from '@/lib/supabase-profile';
 
-type BootTarget = 'signup' | 'intro' | 'get-started' | 'tabs' | null;
+type BootTarget = 'signup' | 'intro' | 'tabs' | null;
 
 /**
- * Entry: Supabase session → (first-time only) intro wizard → get-started → tabs.
+ * Entry: Supabase session → (first-time only) intro wizard → tabs (home / add ingredients).
  * Returning users hydrate progress from `profiles` so they skip the 12-step flow.
  * Without a session, user is sent to sign up first.
  */
@@ -34,11 +29,7 @@ export default function Index() {
       if (remote) {
         await hydrateLocalFlagsFromRemoteProfile(remote);
       }
-      const [introSeen, started, onboardingDone] = await Promise.all([
-        getIntroSeen(),
-        getGetStartedSeen(),
-        getOnboardingComplete(),
-      ]);
+      const [introSeen, onboardingDone] = await Promise.all([getIntroSeen(), getOnboardingComplete()]);
       if (!introSeen) {
         setTarget('intro');
         return;
@@ -47,14 +38,8 @@ export default function Index() {
         setTarget('tabs');
         return;
       }
-      if (!started) {
-        setTarget('get-started');
-      } else {
-        if (!onboardingDone) {
-          void setOnboardingComplete();
-        }
-        setTarget('tabs');
-      }
+      await syncFlowGateBeforeTabs();
+      setTarget('tabs');
     })();
   }, []);
 
@@ -68,10 +53,6 @@ export default function Index() {
 
   if (target === 'signup') {
     return <Redirect href="/signup" />;
-  }
-
-  if (target === 'get-started') {
-    return <Redirect href="/get-started" />;
   }
 
   if (target === 'intro') {
