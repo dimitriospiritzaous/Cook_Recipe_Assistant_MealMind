@@ -7,11 +7,14 @@ import * as WebBrowser from 'expo-web-browser';
 
 import { clearAuthToken } from '@/lib/auth-storage';
 import { clearFavorites } from '@/lib/favorites-storage';
+import { syncRevenueCatUser } from '@/lib/revenuecat';
 import {
+  AUTH_USER_METADATA_INTRO_COMPLETE,
   clearLastAuthUserId,
   clearProfileAndOnboardingState,
   getLastAuthUserId,
   setLastAuthUserId,
+  type StoredProfile,
 } from '@/lib/profile-storage';
 import { clearLocalRecentIngredients } from '@/lib/recent-ingredients-api';
 import { clearLastGeneratedRecipes } from '@/lib/recipe-generation-session';
@@ -46,6 +49,7 @@ export async function syncLocalStateAfterAuth(): Promise<void> {
 /** Sign out and clear local per-user state so the next sign-in starts from a clean slate. */
 export async function signOutMealMind(): Promise<void> {
   await supabase.auth.signOut();
+  await syncRevenueCatUser(null);
   await clearAuthToken();
   await clearUserScopedDeviceCaches();
   await clearLastAuthUserId();
@@ -404,4 +408,27 @@ export async function signOutSupabase(): Promise<void> {
 export async function getSupabaseSession() {
   const { data } = await supabase.auth.getSession();
   return data.session;
+}
+
+/** Call after the user finishes intro so every future sign-in skips onboarding (metadata is on the account). */
+export async function markIntroCompleteInSupabaseUserMetadata(): Promise<void> {
+  const { error } = await supabase.auth.updateUser({
+    data: { [AUTH_USER_METADATA_INTRO_COMPLETE]: true },
+  });
+  if (error && __DEV__) console.warn('[MealMind] auth.updateUser (intro metadata)', error.message);
+}
+
+/** Legacy accounts: profile row has wizard flags but JWT never got metadata — backfill once. */
+export async function syncAuthMetadataIntroCompleteFromProfileIfNeeded(remote: StoredProfile): Promise<void> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) return;
+  if (user.user_metadata?.[AUTH_USER_METADATA_INTRO_COMPLETE] === true) return;
+  if (remote.introWizardComplete !== true && remote.flowOnboardingDone !== true) return;
+  const { error } = await supabase.auth.updateUser({
+    data: { [AUTH_USER_METADATA_INTRO_COMPLETE]: true },
+  });
+  if (error && __DEV__) console.warn('[MealMind] backfill intro metadata from profile', error.message);
 }

@@ -16,12 +16,7 @@ export async function setPendingRecipeSearch(payload: PendingRecipeSearch): Prom
   await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(payload));
 }
 
-export async function takePendingRecipeSearch(): Promise<PendingRecipeSearch | null> {
-  const raw = await AsyncStorage.getItem(PENDING_KEY);
-  await AsyncStorage.removeItem(PENDING_KEY);
-  if (raw == null) {
-    return null;
-  }
+function parsePendingRaw(raw: string): PendingRecipeSearch | null {
   try {
     const p = JSON.parse(raw) as PendingRecipeSearch;
     if (!p || !Array.isArray(p.ingredients)) {
@@ -36,6 +31,29 @@ export async function takePendingRecipeSearch(): Promise<PendingRecipeSearch | n
   } catch {
     return null;
   }
+}
+
+/** Read pending search without consuming it (for gating before generation). */
+export async function peekPendingRecipeSearch(): Promise<PendingRecipeSearch | null> {
+  const raw = await AsyncStorage.getItem(PENDING_KEY);
+  if (raw == null) {
+    return null;
+  }
+  return parsePendingRaw(raw);
+}
+
+export async function takePendingRecipeSearch(): Promise<PendingRecipeSearch | null> {
+  const raw = await AsyncStorage.getItem(PENDING_KEY);
+  await AsyncStorage.removeItem(PENDING_KEY);
+  if (raw == null) {
+    return null;
+  }
+  return parsePendingRaw(raw);
+}
+
+/** Drop a queued search without running generation (e.g. free tier blocked). */
+export async function clearPendingRecipeSearch(): Promise<void> {
+  await AsyncStorage.removeItem(PENDING_KEY);
 }
 
 export type LastGeneratedSession = {

@@ -2,7 +2,7 @@ import { File, Paths } from 'expo-file-system';
 
 import type { PendingRecipeSearch } from '@/lib/recipe-generation-session';
 import { GENERIC_MEAL_IMAGE_PLACEHOLDERS } from '@/lib/recipe-image-placeholders';
-import { TRUSTED_RECIPE_HERO_URLS, type MockIngredient, type MockRecipe, type MockStep } from '@/lib/mealmind-recipe-mocks';
+import { type MockIngredient, type MockRecipe, type MockStep } from '@/lib/mealmind-recipe-mocks';
 import type { StoredProfile } from '@/lib/profile-storage';
 import { attachYoutubeVideoThumbnailsToRecipes } from '@/lib/recipe-tutorial-video';
 import { cookedDishSearchSuffix } from '@/lib/recipe-title-media-boost';
@@ -245,6 +245,8 @@ type UnsplashPhotoMeta = {
   urls?: { regular?: string; small?: string; thumb?: string };
   description?: string | null;
   alt_description?: string | null;
+  width?: number;
+  height?: number;
 };
 
 /** Skip stock where Unsplash metadata clearly signals people or non-dish scenes. */
@@ -298,22 +300,39 @@ function unsplashNaturalRealismScore(p: UnsplashPhotoMeta): number {
   return s;
 }
 
+/** Prefer photos near 1:1 so circular loading masks need less aggressive cropping. */
+function unsplashAspectScoreForCircle(p: UnsplashPhotoMeta): number {
+  const w = typeof p.width === 'number' ? p.width : 0;
+  const h = typeof p.height === 'number' ? p.height : 0;
+  if (w <= 0 || h <= 0) {
+    return 0;
+  }
+  return (Math.min(w, h) / Math.max(w, h)) * 2.5;
+}
+
+type UnsplashDishQueryMode = 'default' | 'loading_ingredients';
+
 /**
- * Steer Unsplash toward finished dishes that look like natural food photos (not sterile studio styling).
+ * Steer Unsplash toward finished dishes. Loading mode avoids “lifestyle” (flowers, tablescapes) and favors dish-forward terms.
  */
-function dishOnlyUnsplashQuery(core: string): string {
+function dishOnlyUnsplashQuery(core: string, mode: UnsplashDishQueryMode = 'default'): string {
   const hint =
-    'authentic food photo natural window light plated dish rustic table editorial dinner shallow depth candid lifestyle';
+    mode === 'loading_ingredients'
+      ? 'close up food photography overhead plate bowl cooked vegetables dish recipe rustic wooden table'
+      : 'authentic food photo natural window light plated dish rustic table editorial dinner shallow depth candid lifestyle';
   const merged = `${core.replace(/\s+/g, ' ').trim()} ${hint}`.replace(/\s+/g, ' ').trim();
   return merged.slice(0, 240);
 }
 
-async function fetchUnsplashFoodPhotoUrl(query: string): Promise<string | null> {
+async function fetchUnsplashFoodPhotoUrl(
+  query: string,
+  dishMode: UnsplashDishQueryMode = 'default',
+): Promise<string | null> {
   const key = getUnsplashAccessKey();
   if (!key) {
     return null;
   }
-  const q = dishOnlyUnsplashQuery(`${query} food photography`);
+  const q = dishOnlyUnsplashQuery(`${query} food photography`, dishMode);
   for (let orient of ['squarish', 'landscape'] as const) {
     for (let attempt = 0; attempt < 8; attempt++) {
       const url = `https://api.unsplash.com/photos/random?query=${encodeURIComponent(q)}&orientation=${orient}&content_filter=high`;
@@ -337,16 +356,183 @@ async function fetchUnsplashFoodPhotoUrl(query: string): Promise<string | null> 
   return null;
 }
 
+/** Extra points when Unsplash metadata mentions meal / context tokens (lighter than ingredient coverage). */
+function heroMetaOverlapScore(p: UnsplashPhotoMeta, tokens: string[] | undefined): number {
+  if (tokens == null || tokens.length === 0) {
+    return 0;
+  }
+  const text = unsplashMetaText(p).toLowerCase();
+  if (text.length === 0) {
+    return 0;
+  }
+  let pts = 0;
+  for (const raw of tokens) {
+    const tok = raw.trim().toLowerCase();
+    if (tok.length < 3) {
+      continue;
+    }
+    if (text.includes(tok)) {
+      pts += 2.2;
+    }
+  }
+  return Math.min(pts, 10);
+}
+
+/** Match singular/plural and a few irregular stems in Unsplash descriptions. */
+function textMatchesIngredientToken(text: string, tok: string): boolean {
+  const t = tok.trim().toLowerCase();
+  if (t.length < 3) {
+    return false;
+  }
+  if (text.includes(t)) {
+    return true;
+  }
+  if (!t.endsWith('s') && text.includes(`${t}s`)) {
+    return true;
+  }
+  if (!t.endsWith('s') && text.includes(`${t}es`)) {
+    return true;
+  }
+  if (t.endsWith('y') && t.length > 3) {
+    const stem = t.slice(0, -1);
+    if (text.includes(`${stem}ies`)) {
+      return true;
+    }
+  }
+  if (t.endsWith('s') && t.length > 4) {
+    const stem = t.slice(0, -1);
+    if (text.includes(stem)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function ingredientCoverageScore(p: UnsplashPhotoMeta, tokens: string[]): number {
+  if (tokens.length === 0) {
+    return 0;
+  }
+  const text = unsplashMetaText(p).toLowerCase();
+  if (text.length === 0) {
+    return 0;
+  }
+  let n = 0;
+  for (const tok of tokens) {
+    if (textMatchesIngredientToken(text, tok)) {
+      n += 1;
+    }
+  }
+  const base = n * 15;
+  const allMatched = tokens.length >= 2 && n === tokens.length;
+  const almost = tokens.length >= 3 && n === tokens.length - 1;
+  const bonus = allMatched ? 28 : almost ? 10 : 0;
+  return base + bonus;
+}
+
+const USER_OR_META_MEAT_FISH =
+  /\b(chicken|beef|pork|lamb|turkey|duck|bacon|sausage|burger|steak|ribs|meatball|meat|tofu|tempeh|eggs?|fish|fishes|salmon|tuna|trout|cod|halibut|sea\s*bass|snapper|sardine|mackerel|seafood|shrimp|prawn|prawns|crab|lobster|ceviche|sushi|sashimi|fillet|grilled\s+fish|whole\s+fish)\b/i;
+
+function userIngredientsMentionProtein(tokens: string[]): boolean {
+  return tokens.some((tok) => USER_OR_META_MEAT_FISH.test(tok));
+}
+
+/** When the user only listed plants/pantry, down-rank obvious fish/meat hero shots (e.g. potato+carrot → not whole fish). */
+function loadingHeroProteinMismatchPenalty(p: UnsplashPhotoMeta, ingredientTokens: string[]): number {
+  if (ingredientTokens.length === 0 || userIngredientsMentionProtein(ingredientTokens)) {
+    return 0;
+  }
+  const t = unsplashMetaText(p).toLowerCase();
+  if (!t) {
+    return 0;
+  }
+  if (
+    /\b(fish|salmon|tuna|trout|cod|halibut|sea\s*bass|snapper|seafood|shrimp|prawn|crab|lobster|grilled\s+fish|whole\s+fish|fish\s+plate)\b/i.test(
+      t,
+    )
+  ) {
+    return -26;
+  }
+  if (/\b(chicken|beef|pork|lamb|steak|bacon|burger|ribs)\b/i.test(t)) {
+    return -16;
+  }
+  return 0;
+}
+
+/** Down-rank tablescape / decor shots (flowers, vases) when we need ingredient-aligned dish photos. */
+function loadingHeroLifestyleDecorPenalty(p: UnsplashPhotoMeta, ingredientTokens: string[]): number {
+  if (ingredientTokens.length === 0) {
+    return 0;
+  }
+  const t = unsplashMetaText(p).toLowerCase();
+  if (!t || t.length < 6) {
+    return 0;
+  }
+  const decor =
+    /\b(flower|flowers|bouquet|tulip|tulips|carnation|carnations|rose\s|roses|peony|vase|centerpiece|tablescape|wedding\s+table|dining\s+room|living\s+room|interior\s+design|home\s+decor|radiator|window\s+seat)\b/i.test(
+      t,
+    );
+  if (!decor) {
+    return 0;
+  }
+  const foodForward =
+    /\b(plate|bowl|dish|recipe|cooked|roasted|baked|meal|brunch\s+plate|food\s+styling|overhead|flat[\s-]?lay|close[\s-]?up|vegetable|soup|stew|curry|salad)\b/i.test(
+      t,
+    ) ||
+    ingredientTokens.some((tok) => tok.length >= 3 && textMatchesIngredientToken(t, tok));
+  if (foodForward) {
+    return -6;
+  }
+  return -24;
+}
+
+/** Prefer metadata that clearly describes a dish, not a room scene. */
+function loadingHeroFoodForwardBonus(p: UnsplashPhotoMeta, ingredientTokens: string[]): number {
+  if (ingredientTokens.length === 0) {
+    return 0;
+  }
+  const t = unsplashMetaText(p).toLowerCase();
+  if (!t) {
+    return 0;
+  }
+  let b = 0;
+  if (/\b(overhead|flat[\s-]?lay|top[\s-]?down|close[\s-]?up|macro\s+food)\b/i.test(t)) {
+    b += 7;
+  }
+  if (/\b(food\s+photography|recipe|home\s+cooked|comfort\s+food|cooked|roasted|baked|simmer|sauté)\b/i.test(t)) {
+    b += 5;
+  }
+  if (/\b(vegetable|veggies|root\s+vegetable|soup|stew|side\s+dish|sheet\s+pan)\b/i.test(t)) {
+    b += 5;
+  }
+  return Math.min(b, 16);
+}
+
+/** With ingredient-based loading, thin metadata can’t be scored for relevance — down-rank. */
+function loadingHeroSparseMetaPenalty(p: UnsplashPhotoMeta, ingredientTokens: string[]): number {
+  if (ingredientTokens.length === 0) {
+    return 0;
+  }
+  const t = unsplashMetaText(p).trim();
+  if (t.length >= 14) {
+    return 0;
+  }
+  return -14;
+}
+
 async function fetchUnsplashSearchPhotoUrlsOriented(
   query: string,
   perPage: number,
   orientation: 'squarish' | 'landscape',
+  ingredientTokens?: string[],
+  contextTokens?: string[],
 ): Promise<string[]> {
   const key = getUnsplashAccessKey();
   if (!key) {
     return [];
   }
-  const q = dishOnlyUnsplashQuery(query.replace(/\s+/g, ' ').trim());
+  const ing = ingredientTokens ?? [];
+  const qMode: UnsplashDishQueryMode = ing.length > 0 ? 'loading_ingredients' : 'default';
+  const q = dishOnlyUnsplashQuery(query.replace(/\s+/g, ' ').trim(), qMode);
   if (!q) {
     return [];
   }
@@ -357,6 +543,7 @@ async function fetchUnsplashSearchPhotoUrlsOriented(
     return [];
   }
   const data = (await res.json()) as { results?: UnsplashPhotoMeta[] };
+  const ctx = contextTokens ?? [];
   const scored: { url: string; score: number }[] = [];
   for (const row of data.results ?? []) {
     if (!isAcceptableUnsplashFoodHit(row)) {
@@ -367,7 +554,15 @@ async function fetchUnsplashSearchPhotoUrlsOriented(
       continue;
     }
     const u = raw.trim();
-    let score = unsplashNaturalRealismScore(row);
+    let score =
+      unsplashNaturalRealismScore(row) +
+      unsplashAspectScoreForCircle(row) +
+      ingredientCoverageScore(row, ing) +
+      heroMetaOverlapScore(row, ctx.length > 0 ? ctx : undefined) +
+      loadingHeroProteinMismatchPenalty(row, ing) +
+      loadingHeroLifestyleDecorPenalty(row, ing) +
+      loadingHeroFoodForwardBonus(row, ing) +
+      loadingHeroSparseMetaPenalty(row, ing);
     if (unsplashMetaText(row).length > 0) {
       score += 1;
     }
@@ -378,12 +573,17 @@ async function fetchUnsplashSearchPhotoUrlsOriented(
 }
 
 /** Search: squarish first (flat-lay plates), then landscape if everything was filtered out. */
-async function fetchUnsplashSearchPhotoUrls(query: string, perPage: number): Promise<string[]> {
-  const squarish = await fetchUnsplashSearchPhotoUrlsOriented(query, perPage, 'squarish');
+async function fetchUnsplashSearchPhotoUrls(
+  query: string,
+  perPage: number,
+  ingredientTokens?: string[],
+  contextTokens?: string[],
+): Promise<string[]> {
+  const squarish = await fetchUnsplashSearchPhotoUrlsOriented(query, perPage, 'squarish', ingredientTokens, contextTokens);
   if (squarish.length > 0) {
     return squarish;
   }
-  return fetchUnsplashSearchPhotoUrlsOriented(query, perPage, 'landscape');
+  return fetchUnsplashSearchPhotoUrlsOriented(query, perPage, 'landscape', ingredientTokens, contextTokens);
 }
 
 function pantryNoise(name: string): boolean {
@@ -501,29 +701,192 @@ function buildImageSearchPhrase(r: MockRecipe, index: number): string {
   return parts.join(' ').replace(/\s+/g, ' ').trim().slice(0, 200);
 }
 
+const HERO_SEARCH_STOP = new Set([
+  'and',
+  'with',
+  'the',
+  'for',
+  'from',
+  'cup',
+  'cups',
+  'tbsp',
+  'tsp',
+  'oz',
+  'lb',
+  'large',
+  'small',
+  'medium',
+  'fresh',
+  'diced',
+  'chopped',
+  'sliced',
+  'minced',
+  'whole',
+  'organic',
+  'boneless',
+  'skinless',
+]);
+
+function tokenizeIngredientLines(ingredients: string[]): string[] {
+  const acc: string[] = [];
+  for (const line of ingredients) {
+    for (const chunk of line.split(/[,;/]|(?:\s+and\s+)/i)) {
+      for (const w of chunk.split(/\s+/)) {
+        const t = w.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        if (t.length >= 3 && !HERO_SEARCH_STOP.has(t)) {
+          acc.push(t);
+        }
+      }
+    }
+  }
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of acc) {
+    if (!seen.has(t)) {
+      seen.add(t);
+      out.push(t);
+    }
+  }
+  return out.slice(0, 16);
+}
+
+/** Distinct food tokens from the ingredient list only (used for coverage + protein gating). */
+function heroIngredientTokensFromPending(pending: PendingRecipeSearch): string[] {
+  return tokenizeIngredientLines(
+    pending.ingredients.map((s) => s.trim()).filter((n) => n.length > 0 && !pantryNoise(n)),
+  );
+}
+
+/** Meal-type words for light context scoring (kept separate from ingredient coverage). */
+function heroContextTokensFromPending(pending: PendingRecipeSearch): string[] {
+  const meal = pending.mealTypeLabel.trim().toLowerCase();
+  const acc: string[] = [];
+  if (meal) {
+    for (const w of meal.split(/\s+/)) {
+      const t = w.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      if (t.length >= 3) {
+        acc.push(t);
+      }
+    }
+  }
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of acc) {
+    if (!seen.has(t)) {
+      seen.add(t);
+      out.push(t);
+    }
+  }
+  return out.slice(0, 8);
+}
+
+/** Extra search words derived from meal type, cooking style, and time chips. */
+function heroConditionSearchBoost(pending: PendingRecipeSearch): string {
+  const bits: string[] = [];
+  const style = pending.cookingStyleLabel.toLowerCase();
+  if (/quick/.test(style)) {
+    bits.push('weeknight fast easy');
+  }
+  if (/healthy/.test(style)) {
+    bits.push('wholesome fresh vegetables colorful');
+  }
+  if (/comfort/.test(style)) {
+    bits.push('cozy hearty warming');
+  }
+  if (/budget/.test(style)) {
+    bits.push('simple affordable home');
+  }
+  if (/family/.test(style)) {
+    bits.push('family sharing table');
+  }
+  if (/one[\s-]?pot|one pot/.test(style)) {
+    bits.push('one pan skillet pot');
+  }
+  if (/meal\s*prep/.test(style)) {
+    bits.push('meal prep containers organized');
+  }
+  if (/no\s*cook|no cook/.test(style)) {
+    bits.push('fresh assembly salad bowl');
+  }
+  const time = pending.cookingTimeLabel.toLowerCase();
+  if (/<\s*15|under\s*15|^15|15\s*min/.test(time)) {
+    bits.push('quick 15 minute');
+  }
+  if (/30\+|30\s*\+|45|hour|slow/.test(time)) {
+    bits.push('slow roasted detailed');
+  }
+  if (/15-30|15\s*to\s*30/.test(time)) {
+    bits.push('simple home cooked');
+  }
+  const meal = pending.mealTypeLabel.toLowerCase();
+  if (meal.includes('breakfast') || meal.includes('brunch')) {
+    bits.push('morning eggs brunch table');
+  }
+  if (meal.includes('lunch')) {
+    bits.push('midday bowl plate');
+  }
+  if (meal.includes('dinner')) {
+    bits.push('evening dinner entree plate');
+  }
+  if (meal.includes('snack')) {
+    bits.push('snack small plate');
+  }
+  if (meal.includes('dessert')) {
+    bits.push('sweet dessert');
+  }
+  if (meal.includes('drink') || meal.includes('smoothie')) {
+    bits.push('beverage glass');
+  }
+  if (meal.includes('side')) {
+    bits.push('side dish');
+  }
+  return bits.join(' ').replace(/\s+/g, ' ').trim().slice(0, 100);
+}
+
 function buildPendingHeroSearchQueries(pending: PendingRecipeSearch): string[] {
   const ingredients = pending.ingredients
     .map((s) => s.trim())
     .filter((n) => n.length > 0 && !pantryNoise(n))
-    .slice(0, 8);
-  const ing = ingredients.join(' ');
+    .slice(0, 10);
+  const ingFull = ingredients.slice(0, 8).join(' ');
+  const ingComma = ingredients.slice(0, 8).join(', ');
+  const ingAnd = ingredients.slice(0, 6).join(' and ');
+  const ingTop3 = ingredients.slice(0, 3).join(' ');
+  const ingFirst = ingredients[0]?.trim() ?? '';
+  const ingRest = ingredients.slice(1, 4).join(' ');
   const meal = pending.mealTypeLabel.trim();
   const style = pending.cookingStyleLabel.trim();
   const time = pending.cookingTimeLabel.trim();
-  const pseudoTitle = [meal, style].filter(Boolean).join(' ') || ing || 'meal';
+  const boost = heroConditionSearchBoost(pending);
+  const pseudoTitle = [meal, style].filter(Boolean).join(' ') || ingFull || 'meal';
   const suffix = cookedDishSearchSuffix(pseudoTitle);
+  const cond = [meal, style, time].filter(Boolean).join(' ');
+  const tail = 'rustic table natural light plated cooked dish food photo';
 
-  const combo = [ing, meal, style].filter(Boolean).join(' ');
-  const natural = 'natural light rustic table authentic food photography';
   const rawVariants = [
-    ing ? `${ing} homemade ${meal || 'meal'} ${natural}` : null,
-    ing && meal ? `${ing} ${meal} ${suffix} ${natural}` : null,
-    ing ? `${ing} ${suffix} ${natural}` : null,
-    meal && ing ? `${meal} ${ing} cooked dish ${natural}` : null,
-    combo ? `${combo} ${suffix}` : null,
-    time && ing ? `${ing} ${time} home cooked ${natural}` : null,
-    ing ? `${ing} comfort food plate ${natural}` : null,
-    meal && !ing ? `${meal} food plated ${suffix} ${natural}` : null,
+    ingredients.length >= 2
+      ? `${ingAnd} overhead shot roasted vegetables plate`.replace(/\s+/g, ' ').trim()
+      : null,
+    ingredients.length >= 2
+      ? `${ingFull} close up cooked vegetables bowl`.replace(/\s+/g, ' ').trim()
+      : null,
+    ingredients.length >= 2 ? `${ingAnd} roasted vegetables sheet pan`.replace(/\s+/g, ' ').trim() : null,
+    ingredients.length >= 2 ? `${ingComma} vegetable side dish`.replace(/\s+/g, ' ').trim() : null,
+    ingredients.length >= 2 ? `${ingFull} root vegetables stew bowl`.replace(/\s+/g, ' ').trim() : null,
+    ingredients.length >= 2 ? `${ingAnd} soup bowl rustic`.replace(/\s+/g, ' ').trim() : null,
+    ingFull && meal ? `${ingFull} ${meal} ${boost} ${suffix}`.replace(/\s+/g, ' ').trim() : null,
+    ingFull ? `${ingFull} ${boost} ${suffix} ${style}`.replace(/\s+/g, ' ').trim() : null,
+    ingTop3 && meal ? `${ingTop3} ${meal} recipe ${boost} ${tail}`.replace(/\s+/g, ' ').trim() : null,
+    ingFull && cond ? `${ingFull} ${cond} ${tail}`.replace(/\s+/g, ' ').trim() : null,
+    ingFirst && ingRest ? `${ingFirst} ${ingRest} ${meal} cooked ${tail}`.replace(/\s+/g, ' ').trim() : null,
+    ingFull ? `${ingFull} homemade ${suffix}`.replace(/\s+/g, ' ').trim() : null,
+    ingFull && meal ? `${ingFull} ${meal} ${suffix}`.replace(/\s+/g, ' ').trim() : null,
+    meal && ingFull ? `${meal} ${ingTop3} cooked ${tail}`.replace(/\s+/g, ' ').trim() : null,
+    ingFull && style ? `${ingFull} ${style} ${suffix}`.replace(/\s+/g, ' ').trim() : null,
+    time && ingFull ? `${ingFull} ${time} home cooked ${tail}`.replace(/\s+/g, ' ').trim() : null,
+    ingFull ? `${ingFull} ${suffix} ${tail}`.replace(/\s+/g, ' ').trim() : null,
+    ingFull ? `${ingFull} comfort food plate ${boost}`.replace(/\s+/g, ' ').trim() : null,
+    meal && !ingFull ? `${meal} food plated ${suffix} ${tail}`.replace(/\s+/g, ' ').trim() : null,
   ].filter((x): x is string => Boolean(x?.trim()));
 
   const seen = new Set<string>();
@@ -538,27 +901,68 @@ function buildPendingHeroSearchQueries(pending: PendingRecipeSearch): string[] {
   return out;
 }
 
-/**
- * Stock photo for the loading screen: matches pending ingredients + filters when Unsplash is configured,
- * otherwise a deterministic pick from curated heroes (still varies with the search).
- */
-const LOADING_HERO_UNSPLASH_PER_PAGE = 15;
-const LOADING_HERO_QUERY_PARALLEL = 3;
+/** Sharper square delivery from Unsplash CDN for the circular loading hero (`contentFit="cover"`). */
+function optimizeLoadingHeroDisplayUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!/^https:\/\/images\.unsplash\.com\//i.test(trimmed)) {
+    return trimmed;
+  }
+  try {
+    const u = new URL(trimmed);
+    u.searchParams.set('auto', 'format');
+    u.searchParams.set('fit', 'crop');
+    u.searchParams.set('w', '1600');
+    u.searchParams.set('h', '1600');
+    u.searchParams.set('q', '90');
+    return u.toString();
+  } catch {
+    const sep = trimmed.includes('?') ? '&' : '?';
+    return `${trimmed}${sep}auto=format&fit=crop&w=1600&h=1600&q=90`;
+  }
+}
 
+const LOADING_HERO_UNSPLASH_PER_PAGE = 24;
+const LOADING_HERO_QUERY_PARALLEL = 3;
+const LOADING_HERO_TOP_PICKS = 12;
+
+/**
+ * Realistic stock food photo for the loading ring: aligned with pending ingredients + meal filters when Unsplash
+ * is configured; otherwise a deterministic editorial image from the neutral pool (still varies with the search).
+ */
 export async function resolveLoadingHeroFromPendingSearch(pending: PendingRecipeSearch): Promise<string> {
+  const seed = [
+    ...pending.ingredients,
+    pending.mealTypeLabel,
+    pending.cookingStyleLabel,
+    pending.cookingTimeLabel,
+  ].join('\0');
+
   if (getUnsplashAccessKey()) {
+    const ingredientTokens = heroIngredientTokensFromPending(pending);
+    const contextTokens = heroContextTokensFromPending(pending);
     const queries = buildPendingHeroSearchQueries(pending);
+
+    const dishMode: UnsplashDishQueryMode =
+      ingredientTokens.length > 0 ? 'loading_ingredients' : 'default';
 
     const tryQuery = async (qv: string): Promise<string | null> => {
       try {
-        const candidates = await fetchUnsplashSearchPhotoUrls(qv, LOADING_HERO_UNSPLASH_PER_PAGE);
-        const first = candidates[0];
-        if (first && isHttpsImageUrl(first)) {
-          return first.trim();
+        const candidates = await fetchUnsplashSearchPhotoUrls(
+          qv,
+          LOADING_HERO_UNSPLASH_PER_PAGE,
+          ingredientTokens,
+          contextTokens,
+        );
+        if (candidates.length > 0) {
+          const top = candidates.slice(0, Math.min(LOADING_HERO_TOP_PICKS, candidates.length));
+          const pick = top[0];
+          if (pick && isHttpsImageUrl(pick)) {
+            return optimizeLoadingHeroDisplayUrl(pick);
+          }
         }
-        const remote = await fetchUnsplashFoodPhotoUrl(qv);
+        const remote = await fetchUnsplashFoodPhotoUrl(qv, dishMode);
         if (remote && isHttpsImageUrl(remote)) {
-          return remote.trim();
+          return optimizeLoadingHeroDisplayUrl(remote);
         }
       } catch {
         /* next */
@@ -578,15 +982,9 @@ export async function resolveLoadingHeroFromPendingSearch(pending: PendingRecipe
     }
   }
 
-  const seed = [
-    ...pending.ingredients,
-    pending.mealTypeLabel,
-    pending.cookingStyleLabel,
-    pending.cookingTimeLabel,
-  ].join('\0');
-  const pool = TRUSTED_RECIPE_HERO_URLS.length > 0 ? TRUSTED_RECIPE_HERO_URLS : FOOD_IMAGE_POOL;
-  const idx = hashSeed(seed) % pool.length;
-  return pool[idx] ?? FOOD_IMAGE_POOL[0];
+  const idx = hashSeed(seed) % FOOD_IMAGE_POOL.length;
+  const fallback = FOOD_IMAGE_POOL[idx] ?? FOOD_IMAGE_POOL[0];
+  return optimizeLoadingHeroDisplayUrl(fallback);
 }
 
 type HeroImageContext = {

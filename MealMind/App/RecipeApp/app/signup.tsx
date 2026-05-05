@@ -110,6 +110,11 @@ export default function SignUpScreen() {
         router.replace('/signin');
         return;
       }
+      if (result.session) {
+        showAuthSuccessToast('Account created', 'Welcome to MealMind.');
+        await navigateAfterSuccessfulAuth(router);
+        return;
+      }
       showAuthSuccessToast('Account created', 'You can sign in with your email and password.');
       router.replace('/signin');
     } catch (err) {
