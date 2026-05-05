@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --surface: #fef8f5;
+  --primary: #8f4e00;
+  --primary-container: #ff9f43;
+  --on-surface: #1d1b1a;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-surface text-on-surface font-body antialiased;
+}
+
+/* Subtle paper grain — single lightweight overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, #8f4e00 0%, #ff9f43 100%);
+  }
+
+  .gradient-mesh {
+    background:
+      radial-gradient(ellipse 90% 55% at 15% 35%, rgba(215, 229, 187, 0.5), transparent 55%),
+      radial-gradient(ellipse 70% 45% at 85% 15%, rgba(255, 159, 67, 0.28), transparent 50%),
+      radial-gradient(ellipse 55% 35% at 55% 90%, rgba(218, 194, 177, 0.4), transparent 45%),
+      radial-gradient(ellipse 40% 30% at 70% 55%, rgba(143, 78, 0, 0.06), transparent);
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-primary-container to-primary bg-clip-text text-transparent;
+    background-size: 200% auto;
+  }
+
+  .gradient-text-animated {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(90deg, #8f4e00, #ff9f43, #c46a1a, #8f4e00);
+    background-size: 300% 100%;
+    animation: gradient-shift 10s ease infinite;
+  }
+
+  .animate-delay-100 {
+    animation-delay: 100ms;
+  }
+  .animate-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animate-delay-300 {
+    animation-delay: 300ms;
+  }
+  .animate-delay-400 {
+    animation-delay: 400ms;
+  }
+  .animate-delay-500 {
+    animation-delay: 500ms;
+  }
+
+  .opacity-0-start {
+    opacity: 0;
+  }
+}
+
+/* Primary CTA shimmer on hover — applied via group */
+@layer components {
+  .btn-shine {
+    @apply relative overflow-hidden;
+  }
+  .btn-shine::after {
+    content: '';
+    @apply pointer-events-none absolute inset-0 -translate-x-full skew-x-12 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 transition-opacity duration-300;
+  }
+  .btn-shine:hover::after {
+    @apply opacity-100;
+    animation: shine 0.85s ease-out;
+  }
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-120%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-12deg);
+  }
+}
+
+/* Focus rings for a11y */
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-primary;
+}
