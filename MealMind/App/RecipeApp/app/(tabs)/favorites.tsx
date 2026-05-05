@@ -111,12 +111,13 @@ export default function FavoritesScreen() {
                     useNeutralFallbacks={false}
                     stableKey={`${featured.recipe.id}-fav-featured`}
                   />
-                  <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.78)']}
-                    locations={[0.38, 1]}
-                    style={StyleSheet.absoluteFill}
-                    pointerEvents="none"
-                  />
+                  <View style={styles.featuredBottomScrim} pointerEvents="none">
+                    <LinearGradient
+                      colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.72)']}
+                      locations={[0, 1]}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  </View>
                   <View style={styles.imageOverlayBottom} pointerEvents="none">
                     {featured.recipe.tags.length > 0 ? (
                       <View style={styles.overlayBadgeRow}>
@@ -127,9 +128,7 @@ export default function FavoritesScreen() {
                         ))}
                       </View>
                     ) : null}
-                    <Text style={styles.overlayTitle} numberOfLines={2}>
-                      {featured.recipe.title}
-                    </Text>
+                    <Text style={styles.overlayTitle}>{featured.recipe.title}</Text>
                     <Text style={styles.overlayMetaLine} numberOfLines={1}>
                       {[featured.recipe.timeLabel, featured.recipe.kcalLabel, featured.recipe.servingsLabel]
                         .filter(Boolean)
@@ -163,19 +162,18 @@ export default function FavoritesScreen() {
                         useNeutralFallbacks={false}
                         stableKey={`${entry.recipe.id}-fav-compact`}
                       />
-                      <LinearGradient
-                        colors={['transparent', 'rgba(0,0,0,0.78)']}
-                        locations={[0.42, 1]}
-                        style={StyleSheet.absoluteFill}
-                        pointerEvents="none"
-                      />
+                      <View style={styles.compactBottomScrim} pointerEvents="none">
+                        <LinearGradient
+                          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.72)']}
+                          locations={[0, 1]}
+                          style={StyleSheet.absoluteFill}
+                        />
+                      </View>
                       <View style={styles.imageOverlayBottomCompact} pointerEvents="none">
                         {entry.recipe.tags[0] != null ? (
                           <Text style={styles.overlayKicker}>{entry.recipe.tags[0].label}</Text>
                         ) : null}
-                        <Text style={styles.overlayTitleCompact} numberOfLines={2}>
-                          {entry.recipe.title}
-                        </Text>
+                        <Text style={styles.overlayTitleCompact}>{entry.recipe.title}</Text>
                         <Text style={styles.overlayMetaLineCompact} numberOfLines={1}>
                           {[entry.recipe.timeLabel, entry.recipe.kcalLabel].filter(Boolean).join(' · ')}
                         </Text>
@@ -360,6 +358,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  featuredBottomScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '48%',
+  },
   imageOverlayBottom: {
     position: 'absolute',
     left: MealMindSpace.lg,
@@ -432,6 +437,13 @@ const styles = StyleSheet.create({
   compactImage: {
     width: '100%',
     height: '100%',
+  },
+  compactBottomScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '48%',
   },
   imageOverlayBottomCompact: {
     position: 'absolute',

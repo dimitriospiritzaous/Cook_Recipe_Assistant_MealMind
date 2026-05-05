@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#ffdcc5",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed": "#b0f1cc",
+                        "primary": "#0f5238",
+                        "inverse-on-surface": "#f3f0ec",
+                        "on-tertiary-container": "#ffd0b1",
+                        "on-primary-fixed": "#002114",
+                        "on-primary-container": "#a8e7c5",
+                        "surface-dim": "#dcdad6",
+                        "surface-variant": "#e5e2de",
+                        "on-surface-variant": "#404943",
+                        "on-secondary-fixed": "#002113",
+                        "outline": "#707973",
+                        "on-tertiary-fixed": "#301400",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#b1f0ce",
+                        "on-primary": "#ffffff",
+                        "secondary": "#2b694d",
+                        "outline-variant": "#bfc9c1",
+                        "background": "#fcf9f5",
+                        "primary-container": "#2d6a4f",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#0e5138",
+                        "tertiary-fixed-dim": "#ffb782",
+                        "inverse-surface": "#31302e",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#6d390b",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#94d4b1",
+                        "inverse-primary": "#95d4b3",
+                        "surface-tint": "#2c694e",
+                        "tertiary": "#6e3a0b",
+                        "secondary-container": "#b0f1cc",
+                        "surface-bright": "#fcf9f5",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#eae8e4",
+                        "on-secondary-container": "#327053",
+                        "tertiary-container": "#8a5122",
+                        "primary-fixed-dim": "#95d4b3",
+                        "surface": "#fcf9f5",
+                        "on-background": "#1c1c1a",
+                        "surface-container-highest": "#e5e2de",
+                        "on-surface": "#1c1c1a",
+                        "surface-container-low": "#f6f3ef",
+                        "surface-container": "#f0ede9",
+                        "on-secondary-fixed-variant": "#0c5136"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "touch-target-min": "44px",
+                        "unit": "8px",
+                        "margin-desktop": "40px",
+                        "gutter": "16px",
+                        "margin-mobile": "20px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Manrope"],
+                        "h1": ["Plus Jakarta Sans"],
+                        "body-lg": ["Manrope"],
+                        "h3": ["Plus Jakarta Sans"],
+                        "h2": ["Plus Jakarta Sans"],
+                        "body-md": ["Manrope"],
+                        "label-sm": ["Manrope"],
+                        "label-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "h1": ["40px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "h3": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "h2": ["32px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "1.1", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "label-md": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #fcf9f5;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-surface antialiased pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 z-50 w-full flex items-center justify-between px-5 h-16 bg-white/80 dark:bg-stone-950/80 backdrop-blur-md border-b border-stone-100 dark:border-stone-800 shadow-sm font-['Plus_Jakarta_SANS'] antialiased">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-primary-fixed flex items-center justify-center overflow-hidden">
+<img alt="Alex Rivera" class="w-full h-full object-cover" data-alt="A professional studio headshot of a person with friendly features, wearing a neutral-toned linen shirt against a warm, soft-lit background. The visual style is crisp and modern with high clarity, reflecting a premium health and wellness app aesthetic. Soft morning light creates a clean, bright, and trustworthy mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsORIslU0qtUMLn25sUTmeaN980-GdtXGS_8b9xSdvxXIOmygsXgbEi6lSrAeFN7-zyb-qfB4OAw6luE9dLF_i0IWp9pBHsBwGyW3qKIYT1mCgM9zZxEJlHHPnXyVhFjdLZxVphNw0cX6mXyyvOPmnO7b5GcNVaRhqxYN9gMuhbKQ3clV_yqXNUDkEcajjJVJ5KQ7KavSTc7XJ2-kBrULQhOnCMOm3eqBaNlNYymbSolt-4aN71SgsfLTPGoKEH96olQozuhj_uJw"/>
+</div>
+<span class="text-xl font-bold tracking-tight text-emerald-900 dark:text-emerald-100">MealMind</span>
+</div>
+<button class="flex items-center justify-center h-10 w-10 rounded-full hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors active:scale-95 duration-200 text-emerald-800 dark:text-emerald-400">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</header>
+<main class="mt-16 px-5 max-w-2xl mx-auto space-y-8 py-8">
+<!-- Account Header -->
+<section class="flex flex-col items-center text-center gap-2">
+<div class="relative">
+<div class="w-24 h-24 rounded-full border-4 border-white shadow-md overflow-hidden bg-surface-container">
+<img alt="Alex Rivera profile" class="w-full h-full object-cover" data-alt="Close up portrait of a young man with a supportive and knowledgeable expression. He is positioned in a modern, brightly lit apartment with a blur of a green kitchen plant in the background. The lighting is soft and organic, consistent with a clean-living and healthy lifestyle brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0zHYZ1KMYdNMuCqbj-rlDL0YRmMYWcJDJK9xfzllW-tINn26vOx-w7JsJ_HE-aLTtxabcNGKVfsym7LuZ_ig9Sfx6eymNrP_EtDULrmo_czukh_iYhf2nW42P6suZKEce9NUSLKlvke9I16dempmjLx7BbzcLjgTkLuRAIVruDUBdaNZtgT4RGW3xhy6bAz-mJIp7VK9gfgryu8rilaV510YPEKHMI4QmZNtT9-AQhgqeT3GSK4Q91giFwP9aaXrB5o4Y3pbTUcI"/>
+</div>
+<div class="absolute bottom-0 right-0 bg-primary px-2 py-0.5 rounded-full shadow-sm">
+<span class="font-label-sm text-[10px] text-white">PRO</span>
+</div>
+</div>
+<div class="mt-2">
+<h1 class="font-h2 text-on-surface">Alex Rivera</h1>
+<p class="font-body-sm text-outline">alex@example.com</p>
+<span class="inline-block mt-2 px-3 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm">Free Plan</span>
+</div>
+</section>
+<!-- Subscription Teaser Card -->
+<section class="relative overflow-hidden rounded-xl bg-primary-container p-6 shadow-lg text-on-primary-container">
+<div class="relative z-10 flex flex-col gap-4">
+<div>
+<h3 class="font-h3 text-white">Current Plan: Free</h3>
+<p class="font-body-md text-primary-fixed-dim mt-1">Unlock personalized AI recipes &amp; nutrition tracking.</p>
+</div>
+<button class="w-full py-3 bg-white text-primary font-label-md rounded-lg shadow-sm hover:bg-surface-bright active:scale-[0.98] transition-all">
+                    Upgrade to Pro
+                </button>
+</div>
+<!-- Abstract Background Element -->
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-secondary opacity-20 rounded-full blur-3xl"></div>
+<div class="absolute -bottom-8 -left-8 w-40 h-40 bg-primary opacity-30 rounded-full blur-2xl"></div>
+</section>
+<!-- Taste Profile Summary -->
+<section class="bg-surface-container-lowest border border-stone-100 rounded-xl p-6 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-h3 text-on-surface">Taste Profile</h3>
+<button class="text-primary font-label-md hover:underline decoration-2 underline-offset-4">Edit Taste Profile</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="bg-surface-container-low p-4 rounded-lg flex flex-col items-center text-center">
+<span class="material-symbols-outlined text-primary mb-2" data-icon="restaurant">restaurant</span>
+<p class="font-label-sm text-outline">Goal</p>
+<p class="font-body-md font-semibold">Healthy Eating</p>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg flex flex-col items-center text-center">
+<span class="material-symbols-outlined text-primary mb-2" data-icon="eco">eco</span>
+<p class="font-label-sm text-outline">Diet</p>
+<p class="font-body-md font-semibold">Vegetarian</p>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg flex flex-col items-center text-center">
+<span class="material-symbols-outlined text-primary mb-2" data-icon="local_fire_department">local_fire_department</span>
+<p class="font-label-sm text-outline">Spice</p>
+<p class="font-body-md font-semibold">Medium</p>
+</div>
+</div>
+</section>
+<!-- Kitchen & Region Section -->
+<section class="space-y-4">
+<h4 class="font-label-md text-outline px-1 uppercase tracking-widest">Kitchen &amp; Region</h4>
+<div class="bg-surface-container-lowest border border-stone-100 rounded-xl divide-y divide-stone-100 overflow-hidden shadow-sm">
+<div class="flex items-center justify-between p-4 hover:bg-stone-50 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline" data-icon="public">public</span>
+<span class="font-body-md">Country</span>
+</div>
+<div class="flex items-center gap-2 text-outline">
+<span class="font-body-md">United States</span>
+<span class="material-symbols-outlined text-[20px]" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-4 hover:bg-stone-50 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline" data-icon="balance">balance</span>
+<span class="font-body-md">Kitchen Comfort</span>
+</div>
+<div class="flex items-center gap-2 text-outline">
+<span class="font-body-md">Balanced</span>
+<span class="material-symbols-outlined text-[20px]" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-4 hover:bg-stone-50 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline" data-icon="skillet">skillet</span>
+<span class="font-body-md">Skill Level</span>
+</div>
+<div class="flex items-center gap-2 text-outline">
+<span class="font-body-md">Home Cook</span>
+<span class="material-symbols-outlined text-[20px]" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</div>
+</section>
+<!-- App Settings -->
+<section class="space-y-4">
+<h4 class="font-label-md text-outline px-1 uppercase tracking-widest">App Settings</h4>
+<div class="bg-surface-container-lowest border border-stone-100 rounded-xl divide-y divide-stone-100 overflow-hidden shadow-sm">
+<div class="flex items-center justify-between p-4 hover:bg-stone-50 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline" data-icon="language">language</span>
+<span class="font-body-md">Language</span>
+</div>
+<div class="flex items-center gap-2 text-outline">
+<span class="font-body-md">English</span>
+<span class="material-symbols-outlined text-[20px]" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-4 hover:bg-stone-50 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline" data-icon="dark_mode">dark_mode</span>
+<span class="font-body-md">Theme</span>
+</div>
+<div class="flex items-center gap-2 text-outline">
+<span class="font-body-md">System</span>
+<span class="material-symbols-outlined text-[20px]" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Support Section -->
+<section class="space-y-4">
+<h4 class="font-label-md text-outline px-1 uppercase tracking-widest">Support</h4>
+<div class="bg-surface-container-lowest border border-stone-100 rounded-xl divide-y divide-stone-100 overflow-hidden shadow-sm">
+<div class="flex items-center justify-between p-4 hover:bg-stone-50 transition-colors cursor-pointer">
+<div class="flex items-center gap-4 text-on-surface">
+<span class="material-symbols-outlined text-outline" data-icon="help_center">help_center</span>
+<span class="font-body-md">Help &amp; FAQ</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[20px]" data-icon="launch">launch</span>
+</div>
+<div class="flex items-center justify-between p-4 hover:bg-stone-50 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline" data-icon="rate_review">rate_review</span>
+<span class="font-body-md">Feedback</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[20px]" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-4 hover:bg-stone-50 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline" data-icon="shield">shield</span>
+<span class="font-body-md">Privacy</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[20px]" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-4 hover:bg-stone-50 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline" data-icon="gavel">gavel</span>
+<span class="font-body-md">Terms</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[20px]" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Danger Zone -->
+<section class="space-y-4 pt-4">
+<div class="flex flex-col gap-3">
+<button class="w-full h-12 flex items-center justify-center gap-2 border-2 border-error text-error font-label-md rounded-xl hover:bg-error-container transition-colors active:scale-95">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+                    Sign Out
+                </button>
+<button class="w-full h-12 flex items-center justify-center gap-2 text-error font-body-sm hover:underline decoration-1 underline-offset-4 active:scale-95">
+                    Delete Account
+                </button>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pt-2 pb-6 bg-white dark:bg-stone-950 border-t border-stone-100 dark:border-stone-800 shadow-[0_-4px_16px_rgba(0,0,0,0.05)] rounded-t-2xl">
+<div class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 px-4 py-1 hover:text-emerald-700 dark:hover:text-emerald-300 active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-['Plus_Jakarta_SANS'] text-[11px] font-medium mt-1">Discover</span>
+</div>
+<div class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 px-4 py-1 hover:text-emerald-700 dark:hover:text-emerald-300 active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-['Plus_Jakarta_SANS'] text-[11px] font-medium mt-1">Planner</span>
+</div>
+<div class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 px-4 py-1 hover:text-emerald-700 dark:hover:text-emerald-300 active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="shopping_basket">shopping_basket</span>
+<span class="font-['Plus_Jakarta_SANS'] text-[11px] font-medium mt-1">Grocery</span>
+</div>
+<div class="flex flex-col items-center justify-center text-emerald-800 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl px-4 py-1 active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="person" data-weight="fill">person</span>
+<span class="font-['Plus_Jakarta_SANS'] text-[11px] font-medium mt-1">Profile</span>
+</div>
+</nav>
+</body></html>

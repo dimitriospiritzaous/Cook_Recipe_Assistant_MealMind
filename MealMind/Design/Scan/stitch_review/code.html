@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed-dim": "#bdcca7",
+                    "on-secondary": "#ffffff",
+                    "inverse-primary": "#ffb779",
+                    "tertiary-fixed-dim": "#ffb689",
+                    "surface": "#fdf9f4",
+                    "primary": "#6c3a00",
+                    "on-error": "#ffffff",
+                    "tertiary": "#733500",
+                    "surface-tint": "#8e4f04",
+                    "outline-variant": "#d8c3b3",
+                    "on-secondary-fixed": "#141f07",
+                    "on-primary-fixed-variant": "#6c3a00",
+                    "surface-container-highest": "#e6e2dd",
+                    "primary-fixed": "#ffdcc1",
+                    "on-tertiary": "#ffffff",
+                    "surface-bright": "#fdf9f4",
+                    "primary-container": "#8d4e03",
+                    "surface-container-high": "#ebe8e3",
+                    "on-surface-variant": "#534438",
+                    "on-primary-container": "#ffcea7",
+                    "tertiary-container": "#974700",
+                    "on-surface": "#1c1c19",
+                    "secondary-container": "#d6e5bf",
+                    "surface-variant": "#e6e2dd",
+                    "tertiary-fixed": "#ffdbc8",
+                    "on-tertiary-fixed-variant": "#743500",
+                    "on-error-container": "#93000a",
+                    "primary-fixed-dim": "#ffb779",
+                    "error-container": "#ffdad6",
+                    "background": "#fdf9f4",
+                    "on-secondary-container": "#5a6749",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#f1ede8",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed": "#2e1500",
+                    "inverse-on-surface": "#f4f0eb",
+                    "secondary-fixed": "#d9e8c2",
+                    "on-background": "#1c1c19",
+                    "error": "#ba1a1a",
+                    "secondary": "#556345",
+                    "outline": "#857466",
+                    "inverse-surface": "#31302d",
+                    "surface-container-low": "#f7f3ee",
+                    "on-secondary-fixed-variant": "#3e4b2f",
+                    "on-tertiary-fixed": "#311300",
+                    "on-tertiary-container": "#ffcdb0",
+                    "surface-dim": "#ddd9d5"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Plus Jakarta Sans"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#fdf9f4]/80 dark:bg-[#1c1c19]/80 backdrop-blur-md flex items-center justify-between px-6 h-16 w-full">
+<div class="flex items-center gap-4">
+<button class="text-[#6c3a00] dark:text-[#ffdcc1] active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<h1 class="text-xl font-bold text-[#1c1c19] dark:text-[#fdf9f4] tracking-tight">Kitchen Scanner</h1>
+</div>
+<button class="text-[#6c3a00] dark:text-[#ffdcc1] active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</header>
+<main class="pt-24 px-6 max-w-2xl mx-auto">
+<!-- Progress Indicator -->
+<div class="mb-10">
+<div class="flex justify-between items-end mb-2">
+<p class="text-label-sm font-bold uppercase tracking-widest text-primary">Scan Complete</p>
+<p class="text-label-sm text-on-surface-variant">3 Items Found</p>
+</div>
+<div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full w-full bg-gradient-to-r from-primary to-primary-container rounded-full"></div>
+</div>
+</div>
+<!-- Header Hero Section -->
+<section class="mb-12">
+<h2 class="text-4xl font-extrabold text-on-background tracking-tight mb-4">Review Ingredients</h2>
+<div class="bg-secondary-container/30 p-6 rounded-lg flex gap-4 items-start border border-secondary-fixed-dim/20">
+<span class="material-symbols-outlined text-secondary pt-1" data-icon="auto_awesome">auto_awesome</span>
+<div>
+<p class="font-bold text-on-secondary-container text-lg">Chef's Note</p>
+<p class="text-on-secondary-container leading-relaxed">Our sommelier AI has identified these fresh arrivals. Adjust the list below to refine your personalized recipe suggestions.</p>
+</div>
+</div>
+</section>
+<!-- Detected Items List -->
+<div class="space-y-4 mb-12">
+<!-- Item 1 -->
+<div class="flex items-center gap-4 p-4 bg-surface-container rounded-xl group hover:bg-surface-container-high transition-colors">
+<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+<img alt="Fresh baby spinach" class="w-full h-full object-cover" data-alt="Close-up of vibrant green organic baby spinach leaves with tiny water droplets under soft morning light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFVGvtwwH01m1ZEo_ghL8u2X5VKwauc3xOEec73SJyyEr6nsVXPTvwXGhZ_vCY4pIEIIO6T7ChUkLb22XkOf-0tdI8Wd0u1ZjrPOgYcVG_wI5l0jpvBF_BZu5gnaein78E9kCrm0J51NyTAUAiFj9bf6GzKzgQjIatIBT0I50Zl540BV0xIzHwWkyduybt9ajrNq_96jcA0LBXp932Kow0p_EhC6JV3wuTP_HVI5RMZO076bO7BGyKLG3ykCwUernot7Oq0cWomTNd"/>
+</div>
+<div class="flex-grow">
+<h3 class="font-bold text-lg text-on-surface">Baby Spinach</h3>
+<p class="text-on-surface-variant text-sm">Fresh Greens • 1 Bag</p>
+</div>
+<div class="flex gap-2">
+<button class="p-2 text-primary hover:bg-primary-fixed rounded-full transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+</button>
+<button class="p-2 text-error hover:bg-error-container rounded-full transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center gap-4 p-4 bg-surface-container rounded-xl group hover:bg-surface-container-high transition-colors">
+<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+<img alt="Cherry tomatoes" class="w-full h-full object-cover" data-alt="A cluster of ripe red cherry tomatoes on a vine resting on a rustic wooden table with moody lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdnZHArnppdAY9TaW_wA3pg_zLYmUi6v2Ix87fOElps1Z86ubwRn9d_bUpDFqJWk8Y4W6n7io4IT4K6AE0E_WYf-ghNUGpPkphh6esykHIBt50txRNzWD9CD5tVSYK07HuQie3LFYzUrWSdaOXFIyTFgnuqC9fGQKLgDM8xqQqmCbhzRaiMzo06q2hqhkutVT252ieLXqiLgv_wN8LdiQHKe-NwI-9x5d6HiiiOU-OMuxXtMnPWFvaEzwsztiiZCCPh21FBpnWpnIe"/>
+</div>
+<div class="flex-grow">
+<h3 class="font-bold text-lg text-on-surface">Cherry Tomatoes</h3>
+<p class="text-on-surface-variant text-sm">Produce • ~250g</p>
+</div>
+<div class="flex gap-2">
+<button class="p-2 text-primary hover:bg-primary-fixed rounded-full transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+</button>
+<button class="p-2 text-error hover:bg-error-container rounded-full transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="flex items-center gap-4 p-4 bg-surface-container rounded-xl group hover:bg-surface-container-high transition-colors">
+<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+<img alt="Red onion" class="w-full h-full object-cover" data-alt="A whole purple red onion with dry papery skin on a clean minimalist background showing organic texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0ReO0uskwrMATdazgUmQJp4MGQsE4fdwzNONWmtqPwOHQFVK87y715MGrNkvvs3ZZuzbg3RJBIxTNMhvsDSFbTSxX9k63xAcMw-sje5VHGoD71-NN1gPje-50eWGZZsU0A52W2nhZvjufBV_0T-XetqBHlN9DAmIEUagPtLwp-on_MRjqnAV80BNU4BWJIlC_UPUbt8ByHW64c5UQjNnhnt6JRO_dOhFXRlFIrU9B60QsZke53YAd2KOGKWO4Dy1QrkQm94j_clvg"/>
+</div>
+<div class="flex-grow">
+<h3 class="font-bold text-lg text-on-surface">Red Onion</h3>
+<p class="text-on-surface-variant text-sm">Vegetable • 1 Unit</p>
+</div>
+<div class="flex gap-2">
+<button class="p-2 text-primary hover:bg-primary-fixed rounded-full transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+</button>
+<button class="p-2 text-error hover:bg-error-container rounded-full transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Add Manually Action -->
+<button class="w-full py-4 border-2 border-dashed border-outline-variant rounded-xl flex items-center justify-center gap-2 text-on-surface-variant hover:bg-surface-container transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+<span class="font-bold">Add Ingredient Manually</span>
+</button>
+<!-- CTA Section -->
+<div class="fixed bottom-24 left-0 w-full px-6 flex justify-center pointer-events-none">
+<button class="pointer-events-auto w-full max-w-md h-16 rounded-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold text-lg shadow-xl shadow-primary/20 flex items-center justify-center gap-3 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="restaurant">restaurant</span>
+                Find Recipes
+            </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-3 bg-[#fdf9f4]/80 dark:bg-[#1c1c19]/80 backdrop-blur-md z-50 rounded-t-[3rem] shadow-[0_-12px_32px_rgba(46,21,0,0.06)]">
+<button class="flex flex-col items-center justify-center text-[#534438] dark:text-[#d8c3b3] px-5 py-2 hover:bg-[#f1ede8] dark:hover:bg-[#534438] rounded-full active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Pantry</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-[#ffdcc1] dark:bg-[#6c3a00] text-[#2e1500] dark:text-[#ffffff] rounded-full px-5 py-2 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="center_focus_strong">center_focus_strong</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Scan</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#534438] dark:text-[#d8c3b3] px-5 py-2 hover:bg-[#f1ede8] dark:hover:bg-[#534438] rounded-full active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Recipes</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#534438] dark:text-[#d8c3b3] px-5 py-2 hover:bg-[#f1ede8] dark:hover:bg-[#534438] rounded-full active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Plan</span>
+</button>
+</nav>
+</body></html>

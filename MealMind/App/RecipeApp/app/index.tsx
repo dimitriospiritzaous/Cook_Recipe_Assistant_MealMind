@@ -4,20 +4,18 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { MealMindColors } from '@/constants/mealmind-colors';
 import {
-  getGetStartedSeen,
   getIntroSeen,
-  getOnboardingComplete,
   hydrateLocalFlagsFromRemoteProfile,
-  setOnboardingComplete,
+  syncLocalIntroFlagsFromAuthUser,
 } from '@/lib/profile-storage';
-import { getSupabaseSession } from '@/lib/supabase-auth';
+import { getSupabaseSession, syncAuthMetadataIntroCompleteFromProfileIfNeeded } from '@/lib/supabase-auth';
 import { fetchMealMindProfile } from '@/lib/supabase-profile';
 
-type BootTarget = 'signup' | 'intro' | 'get-started' | 'tabs' | null;
+type BootTarget = 'signup' | 'intro' | 'tabs' | null;
 
 /**
- * Entry: Supabase session → (first-time only) intro wizard → get-started → tabs.
- * Returning users hydrate progress from `profiles` so they skip the 12-step flow.
+ * Entry: Supabase session → (first-time only) intro wizard → tabs.
+ * Returning users skip intro via Supabase `user_metadata` and/or `profiles` hydration.
  * Without a session, user is sent to sign up first.
  */
 export default function Index() {
@@ -33,28 +31,17 @@ export default function Index() {
       const remote = await fetchMealMindProfile();
       if (remote) {
         await hydrateLocalFlagsFromRemoteProfile(remote);
+        await syncAuthMetadataIntroCompleteFromProfileIfNeeded(remote);
       }
-      const [introSeen, started, onboardingDone] = await Promise.all([
-        getIntroSeen(),
-        getGetStartedSeen(),
-        getOnboardingComplete(),
-      ]);
+      const sessionForFlags = (await getSupabaseSession()) ?? session;
+      await syncLocalIntroFlagsFromAuthUser(sessionForFlags.user);
+
+      const introSeen = await getIntroSeen();
       if (!introSeen) {
         setTarget('intro');
         return;
       }
-      if (onboardingDone) {
-        setTarget('tabs');
-        return;
-      }
-      if (!started) {
-        setTarget('get-started');
-      } else {
-        if (!onboardingDone) {
-          void setOnboardingComplete();
-        }
-        setTarget('tabs');
-      }
+      setTarget('tabs');
     })();
   }, []);
 
@@ -68,10 +55,6 @@ export default function Index() {
 
   if (target === 'signup') {
     return <Redirect href="/signup" />;
-  }
-
-  if (target === 'get-started') {
-    return <Redirect href="/get-started" />;
   }
 
   if (target === 'intro') {

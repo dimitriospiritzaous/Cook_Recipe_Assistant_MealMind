@@ -1,6 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -28,6 +29,7 @@ import {
 import { showErrorToast } from '@/lib/mealmind-toast';
 import { pickScanImage } from '@/lib/pick-scan-image';
 import { fetchRecentIngredients, type RecentIngredient } from '@/lib/recent-ingredients-api';
+import { canGenerateAiRecipes } from '@/lib/free-generation-limit';
 import { setPendingRecipeSearch } from '@/lib/recipe-generation-session';
 import { takePendingScanIngredients } from '@/lib/scan-session';
 
@@ -209,19 +211,30 @@ export default function HomeScreen() {
   };
 
   const onFindMyMeal = () => {
-    const ingredients = ingredientsInput
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const mealTypeLabel = MEAL_TYPE_CHIPS.find((c) => c.id === mealTypeId)?.label ?? '';
-    const cookingTimeLabel = COOKING_TIME_CHIPS.find((c) => c.id === timeId)?.label ?? '';
-    const cookingStyleLabel = COOKING_STYLE_CHIPS.find((c) => c.id === cookingStyleId)?.label ?? '';
-    void setPendingRecipeSearch({
-      ingredients,
-      mealTypeLabel,
-      cookingTimeLabel,
-      cookingStyleLabel,
-    }).then(() => router.push('/loading'));
+    void (async () => {
+      if (!(await canGenerateAiRecipes())) {
+        showErrorToast(
+          'Free recipe used',
+          'You’ve already generated recipes on the free plan. Upgrade to MealMind Pro for unlimited AI meals.',
+        );
+        router.push('/(tabs)/profile/subscription');
+        return;
+      }
+      const ingredients = ingredientsInput
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const mealTypeLabel = MEAL_TYPE_CHIPS.find((c) => c.id === mealTypeId)?.label ?? '';
+      const cookingTimeLabel = COOKING_TIME_CHIPS.find((c) => c.id === timeId)?.label ?? '';
+      const cookingStyleLabel = COOKING_STYLE_CHIPS.find((c) => c.id === cookingStyleId)?.label ?? '';
+      await setPendingRecipeSearch({
+        ingredients,
+        mealTypeLabel,
+        cookingTimeLabel,
+        cookingStyleLabel,
+      });
+      router.push('/loading');
+    })();
   };
 
   const scrollBottomPad =
@@ -347,7 +360,13 @@ export default function HomeScreen() {
                   contentFit="cover"
                   accessibilityLabel="Healthy eating banner with fresh produce"
                 />
-                <View style={styles.recommendOverlay} pointerEvents="none" />
+                <View style={styles.recommendBottomScrim} pointerEvents="none">
+                  <LinearGradient
+                    colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.52)']}
+                    locations={[0, 1]}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </View>
                 <View style={styles.recommendContent}>
                   <Text style={styles.recommendBadge}>EAT WELL</Text>
                   <Text style={styles.recommendTitle}>Healthy meals, your way</Text>
@@ -586,9 +605,12 @@ const styles = StyleSheet.create({
   recommendImage: {
     ...StyleSheet.absoluteFillObject,
   },
-  recommendOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+  recommendBottomScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '52%',
   },
   recommendContent: {
     position: 'absolute',

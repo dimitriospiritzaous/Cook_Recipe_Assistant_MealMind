@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kitchen Scanner - Harvest Hearth</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#bdcca7",
+                        "on-secondary": "#ffffff",
+                        "inverse-primary": "#ffb779",
+                        "tertiary-fixed-dim": "#ffb689",
+                        "surface": "#fdf9f4",
+                        "primary": "#6c3a00",
+                        "on-error": "#ffffff",
+                        "tertiary": "#733500",
+                        "surface-tint": "#8e4f04",
+                        "outline-variant": "#d8c3b3",
+                        "on-secondary-fixed": "#141f07",
+                        "on-primary-fixed-variant": "#6c3a00",
+                        "surface-container-highest": "#e6e2dd",
+                        "primary-fixed": "#ffdcc1",
+                        "on-tertiary": "#ffffff",
+                        "surface-bright": "#fdf9f4",
+                        "primary-container": "#8d4e03",
+                        "surface-container-high": "#ebe8e3",
+                        "on-surface-variant": "#534438",
+                        "on-primary-container": "#ffcea7",
+                        "tertiary-container": "#974700",
+                        "on-surface": "#1c1c19",
+                        "secondary-container": "#d6e5bf",
+                        "surface-variant": "#e6e2dd",
+                        "tertiary-fixed": "#ffdbc8",
+                        "on-tertiary-fixed-variant": "#743500",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#ffb779",
+                        "error-container": "#ffdad6",
+                        "background": "#fdf9f4",
+                        "on-secondary-container": "#5a6749",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container": "#f1ede8",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed": "#2e1500",
+                        "inverse-on-surface": "#f4f0eb",
+                        "secondary-fixed": "#d9e8c2",
+                        "on-background": "#1c1c19",
+                        "error": "#ba1a1a",
+                        "secondary": "#556345",
+                        "outline": "#857466",
+                        "inverse-surface": "#31302d",
+                        "surface-container-low": "#f7f3ee",
+                        "on-secondary-fixed-variant": "#3e4b2f",
+                        "on-tertiary-fixed": "#311300",
+                        "on-tertiary-container": "#ffcdb0",
+                        "surface-dim": "#ddd9d5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Plus Jakarta Sans"],
+                        "label": ["Plus Jakarta Sans"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .editorial-shadow {
+            box-shadow: 0 12px 32px rgba(46, 21, 0, 0.06);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface overflow-hidden h-screen w-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#fdf9f4]/80 dark:bg-[#1c1c19]/80 backdrop-blur-md flex items-center justify-between px-6 h-16 w-full">
+<button class="active:scale-95 transition-transform hover:opacity-80 transition-opacity text-[#6c3a00] dark:text-[#ffdcc1]">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<h1 class="font-['Plus_Jakarta_Sans'] font-bold tracking-tight text-xl text-[#1c1c19] dark:text-[#fdf9f4]">Kitchen Scanner</h1>
+<button class="active:scale-95 transition-transform hover:opacity-80 transition-opacity text-[#6c3a00] dark:text-[#ffdcc1]">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</header>
+<!-- Camera Viewport Section -->
+<main class="flex-grow relative w-full h-full pt-16 pb-24 overflow-hidden flex flex-col items-center justify-center">
+<!-- Live Viewfinder Frame -->
+<div class="relative w-[90%] h-[618px] rounded-xl overflow-hidden bg-surface-container shadow-2xl">
+<img alt="Kitchen View" class="w-full h-full object-cover" data-alt="Close-up of fresh organic vegetables including tomatoes, bell peppers, and herbs arranged on a warm wooden kitchen counter with soft morning sunlight." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhSbLugjFMjR7pCFHyx4tivm0WLMu2dYrSvBXffaUm5nbiOSByEaPag1al-7Whu11U_Zgqq-ynDiveje9bWHTHaPYtju4-Nc8dpWdJwZ7PA0ns4247kHBxpTiRHXjMlsLkfGCdqpGscGObs-KelDIE0HxIfl-gnt4jpbSxViv3Y9eFcDBzQR7dRw7Wr8nH1pxMuKvd--LhnhyeoXzr6pqUHjKr4BNkgPEq1I0g6nP9_X2cpA5ezCyipOMVp-tAy5u98-Xe8D6F7M7N"/>
+<!-- Scanning Overlay Guide -->
+<div class="absolute inset-0 flex flex-col items-center justify-center p-8">
+<!-- Corner Brackets -->
+<div class="absolute top-8 left-8 w-12 h-12 border-t-2 border-l-2 border-primary-fixed opacity-70"></div>
+<div class="absolute top-8 right-8 w-12 h-12 border-t-2 border-r-2 border-primary-fixed opacity-70"></div>
+<div class="absolute bottom-8 left-8 w-12 h-12 border-b-2 border-l-2 border-primary-fixed opacity-70"></div>
+<div class="absolute bottom-8 right-8 w-12 h-12 border-b-2 border-r-2 border-primary-fixed opacity-70"></div>
+<!-- Scanning Line -->
+<div class="w-full h-0.5 bg-gradient-to-r from-transparent via-primary-fixed to-transparent opacity-40 shadow-[0_0_15px_rgba(255,220,193,0.8)] animate-pulse"></div>
+<!-- Recognition Chips (Simulation) -->
+<div class="absolute bottom-12 flex flex-wrap justify-center gap-2 px-4">
+<div class="bg-surface/80 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 editorial-shadow">
+<span class="w-2 h-2 rounded-full bg-secondary-fixed-dim"></span>
+<span class="text-xs font-bold tracking-tight text-on-surface uppercase">Heirloom Tomato</span>
+</div>
+<div class="bg-surface/80 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 editorial-shadow">
+<span class="w-2 h-2 rounded-full bg-secondary-fixed-dim"></span>
+<span class="text-xs font-bold tracking-tight text-on-surface uppercase">Basil Leaves</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Instructional Tip -->
+<div class="mt-6 px-12 text-center">
+<p class="text-sm font-medium text-on-surface-variant leading-relaxed">
+                Frame your ingredients clearly within the guide to scan them into your <span class="text-primary font-bold">Pantry</span>.
+            </p>
+</div>
+</main>
+<!-- Bottom Controls Area -->
+<div class="fixed bottom-0 left-0 w-full z-50 flex flex-col items-center pb-12">
+<!-- Capture Button Interaction Area -->
+<div class="relative flex items-center justify-center">
+<!-- Decorative Ring -->
+<div class="absolute w-24 h-24 rounded-full border border-primary/20 scale-125"></div>
+<!-- Main Capture Button -->
+<button class="relative w-20 h-20 bg-gradient-to-br from-primary to-primary-container rounded-full flex items-center justify-center text-on-primary shadow-xl active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">center_focus_strong</span>
+</button>
+</div>
+</div>
+<!-- BottomNavBar (Filtered for Active Destination Scan) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#fdf9f4]/80 dark:bg-[#1c1c19]/80 backdrop-blur-md rounded-t-[3rem] shadow-[0_-12px_32px_rgba(46,21,0,0.06)]">
+<!-- Pantry Tab -->
+<div class="flex flex-col items-center justify-center text-[#534438] dark:text-[#d8c3b3] px-5 py-2 hover:bg-[#f1ede8] dark:hover:bg-[#534438] rounded-full active:scale-90 transition-all duration-200 cursor-pointer">
+<span class="material-symbols-outlined mb-1">inventory_2</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Pantry</span>
+</div>
+<!-- Scan Tab (Active) -->
+<div class="flex flex-col items-center justify-center bg-[#ffdcc1] dark:bg-[#6c3a00] text-[#2e1500] dark:text-[#ffffff] rounded-full px-5 py-2 active:scale-90 transition-all duration-200 cursor-pointer">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">center_focus_strong</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Scan</span>
+</div>
+<!-- Recipes Tab -->
+<div class="flex flex-col items-center justify-center text-[#534438] dark:text-[#d8c3b3] px-5 py-2 hover:bg-[#f1ede8] dark:hover:bg-[#534438] rounded-full active:scale-90 transition-all duration-200 cursor-pointer">
+<span class="material-symbols-outlined mb-1">restaurant_menu</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Recipes</span>
+</div>
+<!-- Plan Tab -->
+<div class="flex flex-col items-center justify-center text-[#534438] dark:text-[#d8c3b3] px-5 py-2 hover:bg-[#f1ede8] dark:hover:bg-[#534438] rounded-full active:scale-90 transition-all duration-200 cursor-pointer">
+<span class="material-symbols-outlined mb-1">calendar_today</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Plan</span>
+</div>
+</nav>
+</body></html>

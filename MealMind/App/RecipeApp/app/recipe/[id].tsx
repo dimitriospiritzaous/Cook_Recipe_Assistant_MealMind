@@ -140,18 +140,6 @@ export default function RecipeDetailScreen() {
   return (
     <MealMindScreen scroll={false} contentBottomInset={0} footer={<MealMindMainTabFooter />}>
       <View style={styles.shell}>
-        <View style={styles.topBar}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Go back" hitSlop={12} onPress={() => router.back()} style={styles.iconBtn}>
-            <MaterialIcons name="arrow-back" size={24} color={MealMindColors.primary} />
-          </Pressable>
-          <Text style={styles.topTitle} numberOfLines={1}>
-            Smart Family Recipe Assistant
-          </Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Share" hitSlop={12} style={styles.iconBtn}>
-            <MaterialIcons name="share" size={22} color={MealMindColors.onSurface} />
-          </Pressable>
-        </View>
-
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={{ paddingBottom: insets.bottom + 96 }}
@@ -279,6 +267,25 @@ export default function RecipeDetailScreen() {
           </View>
         </ScrollView>
 
+        <View style={[styles.heroTopBar, { paddingTop: insets.top }]} pointerEvents="box-none">
+          <View style={styles.heroTopBarRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              hitSlop={12}
+              onPress={() => router.back()}
+              style={styles.iconBtn}>
+              <MaterialIcons name="arrow-back" size={24} color="rgba(255,255,255,0.96)" />
+            </Pressable>
+            <Text style={styles.heroTopTitle} numberOfLines={1}>
+              Smart Family Recipe Assistant
+            </Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Share" hitSlop={12} style={styles.iconBtn}>
+              <MaterialIcons name="share" size={22} color="rgba(255,255,255,0.96)" />
+            </Pressable>
+          </View>
+        </View>
+
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom + MealMindSpace.md }]}>
           <GlowButton
             label={favorited ? 'Saved' : 'Save to Favorites'}
@@ -320,9 +327,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: MealMindSpace.lg,
     paddingVertical: MealMindSpace.md,
     gap: MealMindSpace.sm,
-    backgroundColor: `${MealMindColors.surface}E6`,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: `${MealMindColors.outlineVariant}26`,
+    backgroundColor: 'transparent',
+  },
+  heroTopBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    backgroundColor: 'transparent',
+  },
+  heroTopBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: MealMindSpace.lg,
+    paddingVertical: MealMindSpace.md,
+    gap: MealMindSpace.sm,
   },
   iconBtn: {
     padding: 4,
@@ -333,6 +353,17 @@ const styles = StyleSheet.create({
     fontSize: 17,
     letterSpacing: headlineTracking,
     color: MealMindColors.primary,
+  },
+  heroTopTitle: {
+    flex: 1,
+    fontFamily: MealMindFonts.headlineBold,
+    fontSize: 17,
+    letterSpacing: headlineTracking,
+    color: 'rgba(255,255,255,0.96)',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   scroll: {
     flex: 1,
@@ -648,6 +679,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    zIndex: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: MealMindSpace.md,

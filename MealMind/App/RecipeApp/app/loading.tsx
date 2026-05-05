@@ -11,13 +11,15 @@ import { MealMindColors } from '@/constants/mealmind-colors';
 import { MealMindRadii, MealMindShadow, MealMindSpace } from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
 import { generateRecipesFromContext, resolveLoadingHeroFromPendingSearch } from '@/lib/ai-recipe-generate';
+import { canGenerateAiRecipes, recordAiGenerationCompletedIfFreeTier } from '@/lib/free-generation-limit';
 import { showErrorToast } from '@/lib/mealmind-toast';
 import { getProfile } from '@/lib/profile-storage';
 import { recordRecentIngredients } from '@/lib/recent-ingredients-api';
 import {
   clearLastGeneratedRecipes,
+  clearPendingRecipeSearch,
+  peekPendingRecipeSearch,
   setLastGeneratedRecipes,
-  takePendingRecipeSearch,
 } from '@/lib/recipe-generation-session';
 
 const CONTENT_MAX = 440;
@@ -56,8 +58,23 @@ export default function LoadingScreen() {
     let cancelled = false;
     const run = async () => {
       const t0 = Date.now();
-      const pending = await takePendingRecipeSearch();
+      const pending = await peekPendingRecipeSearch();
       if (pending) {
+        const allowed = await canGenerateAiRecipes();
+        if (!allowed) {
+          await clearPendingRecipeSearch();
+          showErrorToast(
+            'Free recipe used',
+            'You’ve already generated recipes on the free plan. Upgrade to MealMind Pro for unlimited AI meals.',
+          );
+          workDoneRef.current = true;
+          setPct(100);
+          if (!cancelled) {
+            router.replace('/(tabs)/profile/subscription');
+          }
+          return;
+        }
+        await clearPendingRecipeSearch();
         void resolveLoadingHeroFromPendingSearch(pending).then((hero) => {
           if (cancelled || workDoneRef.current) {
             return;
@@ -72,6 +89,7 @@ export default function LoadingScreen() {
           const profile = await getProfile();
           const recipes = await generateRecipesFromContext(pending, profile);
           if (recipes.length > 0) {
+            await recordAiGenerationCompletedIfFreeTier();
             await setLastGeneratedRecipes(recipes, {
               mealTypeLabel: pending.mealTypeLabel,
               cookingTimeLabel: pending.cookingTimeLabel,
@@ -244,12 +262,24 @@ export default function LoadingScreen() {
           <View style={styles.column}>
             <Animated.View style={[styles.heroWrap, { transform: [{ translateY }] }]}>
               <View style={styles.heroFrame}>
+                <LinearGradient
+                  colors={[
+                    MealMindColors.surfaceContainerLowest,
+                    `${MealMindColors.secondaryContainer}CC`,
+                    MealMindColors.surfaceContainerHigh,
+                  ]}
+                  locations={[0, 0.42, 1]}
+                  start={{ x: 0.15, y: 0 }}
+                  end={{ x: 0.85, y: 1 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
                 {heroUri ? (
                   <Animated.View style={[styles.heroImageLayer, { opacity: heroFade }]}>
                     <FallbackRecipeImage
                       uri={heroUri}
                       style={styles.heroImg}
-                      contentFit="contain"
+                      contentFit="cover"
+                      useNeutralFallbacks
                       stableKey={`loading-hero|${heroUri.slice(-48)}`}
                       onLoad={onHeroImageLoad}
                     />
@@ -259,9 +289,7 @@ export default function LoadingScreen() {
                   pointerEvents="none"
                   style={[
                     styles.heroPlaceholder,
-                    {
-                      opacity: placeholderFade,
-                    },
+                    { opacity: placeholderFade },
                   ]}>
                   <Animated.View
                     style={[
@@ -274,7 +302,12 @@ export default function LoadingScreen() {
                   />
                   <View style={styles.heroPlaceholderInner}>
                     <ActivityIndicator size="large" color={MealMindColors.primary} />
-                    <Text style={styles.heroPlaceholderHint}>Crafting your preview</Text>
+                    <Text style={styles.heroPlaceholderHint}>
+                      Finding a food photo for your search…
+                    </Text>
+                    <Text style={styles.heroPlaceholderSub}>
+                      Inspired by your ingredients—not a final recipe preview.
+                    </Text>
                   </View>
                 </Animated.View>
               </View>
@@ -373,7 +406,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: MealMindColors.surfaceContainerHigh,
+    backgroundColor: `${MealMindColors.surfaceContainerHigh}E6`,
   },
   heroRing: {
     position: 'absolute',
@@ -389,6 +422,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: MealMindSpace.sm,
+    paddingHorizontal: MealMindSpace.md,
   },
   heroPlaceholderHint: {
     fontFamily: MealMindFonts.bodyMedium,
@@ -396,7 +430,14 @@ const styles = StyleSheet.create({
     letterSpacing: headlineTracking,
     color: MealMindColors.onSurfaceVariant,
     textAlign: 'center',
-    paddingHorizontal: MealMindSpace.md,
+  },
+  heroPlaceholderSub: {
+    fontFamily: MealMindFonts.body,
+    fontSize: 11,
+    lineHeight: 15,
+    color: MealMindColors.outline,
+    textAlign: 'center',
+    maxWidth: 216,
   },
   heroBadge: {
     position: 'absolute',

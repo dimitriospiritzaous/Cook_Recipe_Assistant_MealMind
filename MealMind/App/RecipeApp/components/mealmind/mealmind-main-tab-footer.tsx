@@ -88,6 +88,7 @@ export function MealMindMainTabFooter({ activeTab }: MealMindMainTabFooterProps)
 
 /** Custom tabBar used by `Tabs` navigator. Keeps visuals identical to standalone. */
 export function MealMindTabBar({ state, navigation }: BottomTabBarProps) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const focusedRoute = state.routes[state.index]?.name;
 
@@ -107,9 +108,14 @@ export function MealMindTabBar({ state, navigation }: BottomTabBarProps) {
               target: state.routes.find((r) => r.name === tab.routeName)?.key ?? '',
               canPreventDefault: true,
             });
-            if (!focused && !event.defaultPrevented) {
-              navigation.navigate(tab.routeName);
+            if (event.defaultPrevented) return;
+            if (focused) {
+              if (tab.routeName === 'profile') {
+                router.replace(tab.href);
+              }
+              return;
             }
+            navigation.navigate(tab.routeName);
           };
           return <TabSlot key={tab.key} tab={tab} focused={focused} onPress={onPress} />;
         })}

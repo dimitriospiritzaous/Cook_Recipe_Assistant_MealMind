@@ -13,7 +13,10 @@ import Toast from 'react-native-toast-message';
 import { MealMindColors } from '@/constants/mealmind-colors';
 import { useMealMindFonts } from '@/hooks/use-mealmind-fonts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { loadAndApplyStoredTheme } from '@/lib/app-preferences';
 import { mealmindToastConfig } from '@/lib/mealmind-toast';
+import { initRevenueCat, syncRevenueCatUser } from '@/lib/revenuecat';
+import { supabase } from '@/lib/supabase';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -52,6 +55,27 @@ export default function RootLayout() {
     WebBrowser.maybeCompleteAuthSession();
   }, []);
 
+  useEffect(() => {
+    void loadAndApplyStoredTheme();
+  }, []);
+
+  useEffect(() => {
+    void initRevenueCat();
+  }, []);
+
+  useEffect(() => {
+    const syncRc = () => {
+      void supabase.auth.getSession().then(({ data: { session } }) => {
+        void syncRevenueCatUser(session?.user?.id ?? null);
+      });
+    };
+    syncRc();
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      void syncRevenueCatUser(session?.user?.id ?? null);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
   if (!loaded && !error) {
     return null;
   }
@@ -65,7 +89,6 @@ export default function RootLayout() {
           <Stack.Screen name="signin" options={{ headerShown: false, presentation: 'card' }} />
           <Stack.Screen name="auth/callback" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="intro" options={{ headerShown: false, presentation: 'card' }} />
-          <Stack.Screen name="get-started" options={{ headerShown: false, presentation: 'card' }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="loading" options={{ headerShown: false, presentation: 'card' }} />
           <Stack.Screen name="scan" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
@@ -73,7 +96,7 @@ export default function RootLayout() {
           <Stack.Screen name="results" options={{ headerShown: false, presentation: 'card' }} />
           <Stack.Screen name="recipe/[id]" options={{ headerShown: false, presentation: 'card' }} />
         </Stack>
-        <StatusBar style="dark" />
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         <Toast config={mealmindToastConfig} />
       </ThemeProvider>
     </View>

@@ -42,3 +42,19 @@ export async function fetchMealMindProfile(): Promise<StoredProfile | null> {
   if (data?.profile == null) return null;
   return normalizeStoredProfileJson(data.profile);
 }
+
+/** Best-effort remove server `profiles` row for the signed-in user (RLS must allow delete). */
+export async function deleteMealMindProfileRow(): Promise<{ ok: boolean; error?: string }> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const uid = session?.user?.id;
+  if (!uid) return { ok: false, error: 'No session' };
+
+  const { error } = await supabase.from(TABLE).delete().eq('id', uid);
+  if (error) {
+    if (__DEV__) console.warn('[MealMind] delete profile row', error.message);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}

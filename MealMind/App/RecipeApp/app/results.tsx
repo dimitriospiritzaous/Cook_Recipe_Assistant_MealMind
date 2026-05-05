@@ -12,6 +12,7 @@ import { MealMindColors } from '@/constants/mealmind-colors';
 import { MealMindRadii, MealMindShadow, MealMindSpace } from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
 import { generateRecipesFromContext } from '@/lib/ai-recipe-generate';
+import { canGenerateAiRecipes } from '@/lib/free-generation-limit';
 import { EXPLORE_CATEGORY_CHIPS, type ExploreHomePresetSlug } from '@/lib/explore-category-home';
 import { showErrorToast } from '@/lib/mealmind-toast';
 import type { MockRecipe } from '@/lib/mealmind-recipe-mocks';
@@ -74,17 +75,23 @@ function RecipeOverlayCard({
           useNeutralFallbacks={useNeutralFallbacks}
           stableKey={stableKey}
         />
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.78)']}
-          locations={[0.45, 1]}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
+        <View style={styles.heroBottomScrim} pointerEvents="none">
+          <LinearGradient
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.72)']}
+            locations={[0, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
         <View style={styles.heroOverlay}>
-          <View style={styles.heroOverlayTitleRow}>
-            <Text style={styles.heroOverlayTitle} numberOfLines={2}>
-              {title}
-            </Text>
+          <Text style={styles.heroOverlayTitle}>{title}</Text>
+          <View style={styles.heroOverlayBottomRow}>
+            <View style={styles.heroOverlayBottomLeft}>
+              {detail && detail !== '—' ? (
+                <Text style={styles.heroOverlayDetailText} numberOfLines={1}>
+                  {detail}
+                </Text>
+              ) : null}
+            </View>
             <View style={styles.heroOverlayTimeWrap}>
               <Text style={styles.heroOverlayTime}>{time}</Text>
               {kcal ? (
@@ -99,13 +106,6 @@ function RecipeOverlayCard({
               ) : null}
             </View>
           </View>
-          {detail && detail !== '—' ? (
-            <View style={styles.heroOverlayMetaRow}>
-              <Text style={styles.heroOverlayDetailText} numberOfLines={1}>
-                {detail}
-              </Text>
-            </View>
-          ) : null}
         </View>
       </View>
     </Pressable>
@@ -188,8 +188,16 @@ export default function ResultsScreen() {
       showErrorToast('Recipes', 'List is full. Start a new search from Home.');
       return;
     }
-    setLoadingMore(true);
     void (async () => {
+      if (!(await canGenerateAiRecipes())) {
+        showErrorToast(
+          'Free recipe used',
+          'More AI recipes require MealMind Pro. Upgrade for unlimited generations.',
+        );
+        router.push('/(tabs)/profile/subscription');
+        return;
+      }
+      setLoadingMore(true);
       try {
         const profile = await getProfile();
         const more = await generateRecipesFromContext(session.searchContext!, profile, {
@@ -443,41 +451,45 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  heroBottomScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '58%',
+  },
   heroOverlay: {
     position: 'absolute',
     left: MealMindSpace.lg,
     right: MealMindSpace.lg,
     bottom: MealMindSpace.lg,
-    gap: MealMindSpace.sm,
+    gap: 6,
   },
-  heroOverlayTitleRow: {
+  heroOverlayBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: MealMindSpace.sm,
+  },
+  heroOverlayBottomLeft: {
+    flex: 1,
+    minWidth: 0,
   },
   heroOverlayTimeWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: MealMindSpace.sm,
+    flexShrink: 0,
   },
   heroOverlayTitle: {
-    flex: 1,
     fontFamily: MealMindFonts.headlineBold,
     fontSize: 22,
+    lineHeight: 28,
     color: '#ffffff',
   },
   heroOverlayTime: {
     fontFamily: MealMindFonts.headlineBold,
     fontSize: 18,
     color: MealMindColors.primaryContainer,
-  },
-  heroOverlayMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: MealMindSpace.sm,
-    flexWrap: 'wrap',
-    rowGap: 6,
   },
   heroOverlayMetaItem: {
     flexDirection: 'row',

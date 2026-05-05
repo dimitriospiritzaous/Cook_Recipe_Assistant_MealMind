@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { User } from '@supabase/supabase-js';
 
 export const ONBOARDING_COMPLETE_KEY = 'mealmind.onboardingComplete';
 export const GET_STARTED_SEEN_KEY = 'mealmind.getStartedSeen';
@@ -142,13 +143,15 @@ export function normalizeStoredProfileJson(input: unknown): StoredProfile | null
   }
 }
 
-/** Apply server-backed onboarding progress to local AsyncStorage flags (same device or new device). */
+/**
+ * Apply server-backed onboarding progress to local AsyncStorage flags (same device or new device).
+ * Any existing `profiles` row means the app has upserted at least once — skip intro for returning
+ * sign-ins even when `profile` is `{}` (normalizes to defaults) or legacy JSON lacks wizard flags.
+ */
 export async function hydrateLocalFlagsFromRemoteProfile(remote: StoredProfile): Promise<void> {
   await setProfile(remote);
-  if (remote.introWizardComplete === true) {
-    await setIntroSeen();
-  }
-  if (remote.flowOnboardingDone === true) {
+  await setIntroSeen();
+  if (remote.flowOnboardingDone === true || remote.introWizardComplete === true) {
     await setGetStartedSeen();
     await setOnboardingComplete();
   }
@@ -187,6 +190,22 @@ export async function getGetStartedSeen(): Promise<boolean> {
 
 export async function setGetStartedSeen(): Promise<void> {
   await AsyncStorage.setItem(GET_STARTED_SEEN_KEY, '1');
+}
+
+/** Supabase Auth `user_metadata` key — survives new devices and local cache clears. */
+export const AUTH_USER_METADATA_INTRO_COMPLETE = 'mealmind_intro_complete' as const;
+
+export function userMetadataSaysIntroComplete(user: User | undefined | null): boolean {
+  if (!user) return false;
+  return user.user_metadata?.[AUTH_USER_METADATA_INTRO_COMPLETE] === true;
+}
+
+/** When JWT already marks intro as done, mirror that into AsyncStorage (e.g. second login, reinstall). */
+export async function syncLocalIntroFlagsFromAuthUser(user: User | undefined | null): Promise<void> {
+  if (!userMetadataSaysIntroComplete(user)) return;
+  await setIntroSeen();
+  await setGetStartedSeen();
+  await setOnboardingComplete();
 }
 
 export async function getProfile(): Promise<StoredProfile | null> {

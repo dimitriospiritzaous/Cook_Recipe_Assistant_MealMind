@@ -21,7 +21,14 @@ import { MealMindRadii, MealMindShadow, MealMindSpace } from '@/constants/mealmi
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
 import type { CookingExperience, DietaryPreference, StoredProfile, WellnessGoal } from '@/lib/profile-storage';
 import { resetAppForDev } from '@/lib/dev-reset';
-import { getProfile, setIntroSeen, setProfile } from '@/lib/profile-storage';
+import {
+  getProfile,
+  setGetStartedSeen,
+  setIntroSeen,
+  setOnboardingComplete,
+  setProfile,
+} from '@/lib/profile-storage';
+import { markIntroCompleteInSupabaseUserMetadata } from '@/lib/supabase-auth';
 import { upsertMealMindProfile } from '@/lib/supabase-profile';
 
 type WizardStepId =
@@ -288,11 +295,15 @@ export default function IntroWizardScreen() {
       spicyLevel: draft.spicyLevel,
       calorieFocus: draft.calorieFocus,
       introWizardComplete: true,
+      flowOnboardingDone: true,
     };
     const started = Date.now();
     await setProfile(merged);
     await upsertMealMindProfile(merged);
     await setIntroSeen();
+    await setGetStartedSeen();
+    await setOnboardingComplete();
+    await markIntroCompleteInSupabaseUserMetadata();
     const waited = Date.now() - started;
     const remaining = Math.max(0, FINALIZE_MS - waited);
     await new Promise<void>((resolve) => setTimeout(resolve, remaining));
@@ -301,6 +312,9 @@ export default function IntroWizardScreen() {
 
   const skipAll = useCallback(async () => {
     await setIntroSeen();
+    await setGetStartedSeen();
+    await setOnboardingComplete();
+    await markIntroCompleteInSupabaseUserMetadata();
     router.replace('/');
   }, [router]);
 

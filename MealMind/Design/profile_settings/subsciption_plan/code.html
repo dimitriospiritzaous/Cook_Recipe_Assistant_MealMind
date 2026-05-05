@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#ffdcc5",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed": "#b0f1cc",
+                        "primary": "#0f5238",
+                        "inverse-on-surface": "#f3f0ec",
+                        "on-tertiary-container": "#ffd0b1",
+                        "on-primary-fixed": "#002114",
+                        "on-primary-container": "#a8e7c5",
+                        "surface-dim": "#dcdad6",
+                        "surface-variant": "#e5e2de",
+                        "on-surface-variant": "#404943",
+                        "on-secondary-fixed": "#002113",
+                        "outline": "#707973",
+                        "on-tertiary-fixed": "#301400",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#b1f0ce",
+                        "on-primary": "#ffffff",
+                        "secondary": "#2b694d",
+                        "outline-variant": "#bfc9c1",
+                        "background": "#fcf9f5",
+                        "primary-container": "#2d6a4f",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#0e5138",
+                        "tertiary-fixed-dim": "#ffb782",
+                        "inverse-surface": "#31302e",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#6d390b",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#94d4b1",
+                        "inverse-primary": "#95d4b3",
+                        "surface-tint": "#2c694e",
+                        "tertiary": "#6e3a0b",
+                        "secondary-container": "#b0f1cc",
+                        "surface-bright": "#fcf9f5",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#eae8e4",
+                        "on-secondary-container": "#327053",
+                        "tertiary-container": "#8a5122",
+                        "primary-fixed-dim": "#95d4b3",
+                        "surface": "#fcf9f5",
+                        "on-background": "#1c1c1a",
+                        "surface-container-highest": "#e5e2de",
+                        "on-surface": "#1c1c1a",
+                        "surface-container-low": "#f6f3ef",
+                        "surface-container": "#f0ede9",
+                        "on-secondary-fixed-variant": "#0c5136"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "touch-target-min": "44px",
+                        "unit": "8px",
+                        "margin-desktop": "40px",
+                        "gutter": "16px",
+                        "margin-mobile": "20px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Manrope"],
+                        "h1": ["Plus Jakarta Sans"],
+                        "body-lg": ["Manrope"],
+                        "h3": ["Plus Jakarta Sans"],
+                        "h2": ["Plus Jakarta Sans"],
+                        "body-md": ["Manrope"],
+                        "label-sm": ["Manrope"],
+                        "label-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "h1": ["40px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "h3": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "h2": ["32px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "1.1", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "label-md": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bg-glass {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col">
+<!-- Top Navigation Header (Suppressed BottomNav as this is a focused journey) -->
+<header class="bg-white/80 backdrop-blur-md text-emerald-800 font-['Plus_Jakarta_SANS'] antialiased border-b border-stone-100 shadow-sm fixed top-0 z-50 flex items-center justify-between px-5 h-16 w-full">
+<button class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-stone-50 active:scale-95 duration-200">
+<span class="material-symbols-outlined">close</span>
+</button>
+<h1 class="text-xl font-bold tracking-tight text-emerald-900">MealMind</h1>
+<div class="w-11"></div> <!-- Spacer for centering -->
+</header>
+<main class="flex-grow pt-24 pb-40 px-mobile md:px-margin-desktop max-w-5xl mx-auto w-full">
+<div class="text-center mb-12">
+<h2 class="font-h2 text-h2 text-primary mb-4">Choose Your Path to Health</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl mx-auto">Unlock advanced AI-powered tools and personalized nutrition plans designed for your unique lifestyle.</p>
+</div>
+<!-- Plans Comparison Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+<!-- 'Free' Plan Card -->
+<section class="bg-surface-container-low rounded-xl p-8 border border-outline-variant/30 flex flex-col h-full relative overflow-hidden">
+<div class="mb-6">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant/60">Currently Active</span>
+<h3 class="font-h3 text-h3 text-on-surface mt-2">Free</h3>
+</div>
+<div class="mb-8 flex items-baseline">
+<span class="font-h2 text-h2 text-on-surface">$0</span>
+<span class="font-body-md text-body-md text-on-surface-variant ml-2">/forever</span>
+</div>
+<ul class="space-y-4 mb-8 flex-grow">
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span class="font-body-md text-body-md text-on-surface">3 recipes/day</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span class="font-body-md text-body-md text-on-surface">basic search</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span class="font-body-md text-body-md text-on-surface">community access</span>
+</li>
+</ul>
+<div class="h-12 w-full rounded-lg border-2 border-outline-variant flex items-center justify-center">
+<span class="font-label-md text-label-md text-on-surface-variant">Your Current Plan</span>
+</div>
+</section>
+<!-- 'MealMind Pro' Plan Card (Primary Focus) -->
+<section class="bg-white rounded-xl p-8 shadow-[0_12px_40px_rgba(15,82,56,0.12)] border-2 border-primary flex flex-col h-full relative overflow-hidden ring-4 ring-primary/5">
+<!-- Promo Badge -->
+<div class="absolute top-0 right-0 bg-primary text-on-primary px-6 py-2 rounded-bl-xl font-label-sm text-label-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]" data-weight="fill">star</span>
+                    RECOMMENDED
+                </div>
+<div class="mb-6">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-primary font-bold">Premium Experience</span>
+<h3 class="font-h3 text-h3 text-primary mt-2">MealMind Pro</h3>
+</div>
+<div class="mb-8">
+<div class="flex items-baseline">
+<span class="font-h2 text-h2 text-primary">$79.99</span>
+<span class="font-body-md text-body-md text-on-surface-variant ml-2">/year</span>
+</div>
+<div class="mt-1 flex items-center gap-2">
+<span class="font-label-md text-label-md bg-secondary-fixed text-on-secondary-fixed px-2 py-0.5 rounded">Save 33%</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">or $9.99/month</span>
+</div>
+</div>
+<ul class="space-y-4 mb-8 flex-grow">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-[20px] mt-0.5" data-weight="fill">auto_awesome</span>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Unlimited AI recipes</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Custom creations for any craving</span>
+</div>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]" data-weight="fill">nutrition</span>
+<span class="font-body-md text-body-md text-on-surface">personalized nutrition</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]" data-weight="fill">cloud_off</span>
+<span class="font-body-md text-body-md text-on-surface">offline access</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]" data-weight="fill">shopping_cart</span>
+<span class="font-body-md text-body-md text-on-surface">smart grocery lists</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]" data-weight="fill">support_agent</span>
+<span class="font-body-md text-body-md text-on-surface">premium support</span>
+</li>
+</ul>
+<div class="relative w-full h-32 rounded-lg overflow-hidden mb-4">
+<img alt="Fresh organic food" class="w-full h-full object-cover" data-alt="A lush and vibrant overhead shot of a clean kitchen counter covered in fresh, high-quality organic ingredients like kale, sliced avocados, and bright citrus fruits. The lighting is bright and airy, reflecting a modern minimalist aesthetic with soft natural shadows. The scene evokes a feeling of health and organization, using a color palette of deep evergreens and crisp whites to match the MealMind brand. This professional food photography inspires a lifestyle of wellness and culinary clarity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBC1pkt9S9ATCQsB7DEoAcSXXq7PzGHti6lf9Ccyb20kS3tbqLqGuIcMUmmmTvh9Q3osS8F2eG43v01g_xJwu-wykQKWqlZIM1_CdbYisWgcgWVJDSONJOAPWLWdHXCRquP1jB80_qxclyJDwC1lgZ6i8_a1rq7KlBabVGyDDSlKAf3Of_rEnkb_NaP5CR7PcOugH7FqTegykalvwdkFhjISSsHqEO3qWkmiqavrF6q-N7Py6anrW3MYtrEPPjl0PDJj-UnFVCntHI"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+<div class="absolute bottom-3 left-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-white text-[16px]">verified</span>
+<span class="text-white font-label-sm text-label-sm">Join 50,000+ Pro Members</span>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Sticky Bottom CTA Section -->
+<footer class="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-md border-t border-stone-100 shadow-[0_-8px_24px_rgba(0,0,0,0.05)] z-40 px-mobile py-6">
+<div class="max-w-xl mx-auto flex flex-col gap-4">
+<button class="w-full h-touch-target-min bg-primary text-on-primary rounded-full font-h3 text-body-lg font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center">
+                Continue to Pro
+            </button>
+<button class="w-full py-2 text-primary font-label-md text-label-md hover:underline active:scale-95 transition-all text-center">
+                Restore Purchases
+            </button>
+<div class="flex justify-center items-center gap-6 mt-2">
+<a class="text-on-surface-variant font-label-sm text-label-sm hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<div class="w-1 h-1 rounded-full bg-outline-variant"></div>
+<a class="text-on-surface-variant font-label-sm text-label-sm hover:text-primary transition-colors" href="#">Terms of Service</a>
+</div>
+<p class="text-[10px] text-center text-on-surface-variant/60 leading-relaxed px-4">
+                Subscriptions will automatically renew unless canceled 24 hours before the end of the current period. Management and cancellation can be done in your account settings.
+            </p>
+</div>
+</footer>
+</body></html>
