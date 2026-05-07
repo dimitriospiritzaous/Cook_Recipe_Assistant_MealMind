@@ -42,7 +42,7 @@ const PAID_PLANS: {
   {
     id: 'monthly',
     name: 'Monthly',
-    price: '$20.00',
+    price: '$20',
     unitLabel: '/month',
     caption: 'Billed every month',
     recommended: false,
@@ -50,17 +50,17 @@ const PAID_PLANS: {
   {
     id: 'three_month',
     name: '3 months',
-    price: '$50.00',
-    unitLabel: '/3 mo',
-    caption: '~$16.67/mo · Save vs monthly',
+    price: '$50',
+    unitLabel: ' total',
+    caption: 'About $16.67/mo · Save vs monthly',
     recommended: false,
   },
   {
     id: 'six_month',
     name: '6 months',
-    price: '$100.00',
-    unitLabel: '/6 mo',
-    caption: '~$16.67/mo · Best value',
+    price: '$100',
+    unitLabel: ' total',
+    caption: 'About $16.67/mo · Best value',
     recommended: true,
   },
 ];

@@ -63,7 +63,7 @@ export function SiteFooter() {
             </p>
             <p className="mt-4 font-body text-sm">
               <a href="mailto:support@mealmind.app" className="text-on-surface underline decoration-primary/30 underline-offset-4 transition hover:text-primary hover:decoration-primary">
-                support@mealmind.app
+                davidpeter19900320@gmail.com
               </a>
             </p>
           </div>

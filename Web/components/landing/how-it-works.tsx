@@ -2,17 +2,17 @@ const steps = [
   {
     n: '01',
     title: 'Add what’s on hand',
-    body: 'Type ingredients, pull from recents, or scan from your camera roll—no perfect pantry required.',
+    body: 'Type ingredients, pull from recents, or scan from your camera roll. MealMind treats that list as ground truth—no fantasy shopping trip.',
   },
   {
     n: '02',
     title: 'Set the constraints',
-    body: 'Pick meal type, cooking time, and style—sheet pan, one-pot, no-cook, and more.',
+    body: 'Breakfast or dinner? 15 minutes or slow roast? Sheet pan, one-pot, light & fresh? You set the guardrails; the app works inside them.',
   },
   {
     n: '03',
-    title: 'Curate your plate',
-    body: 'Get rich recipe cards tuned to your taste profile. Save favorites for the nights you’re rushing.',
+    title: 'Get your best matches',
+    body: 'See a tight shortlist of recipe cards tuned to your taste profile—not an infinite scroll. Save favorites for the nights you’re rushing.',
   },
 ];
 
@@ -25,6 +25,10 @@ export function HowItWorksSection() {
           <h2 className="mt-3 font-display text-3xl font-extrabold tracking-editorial text-on-surface md:text-4xl lg:text-[2.5rem] text-balance">
             Three calm steps from “what do we eat?” to “let’s cook.”
           </h2>
+          <p className="mt-5 max-w-2xl font-body text-lg leading-relaxed text-on-surface-variant text-balance">
+            No mystery algorithms you can&apos;t trust—just your ingredients, your schedule, and your preferences
+            blended into suggestions you can actually use tonight.
+          </p>
         </div>
 
         <div className="relative mt-16 md:mt-20">
