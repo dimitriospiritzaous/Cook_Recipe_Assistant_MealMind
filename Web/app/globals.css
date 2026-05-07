@@ -76,6 +76,57 @@ body::before {
   .opacity-0-start {
     opacity: 0;
   }
+
+  /* Animated gradient frame + soft glow for food gallery tiles */
+  .food-frame-ring {
+    @apply rounded-2xl p-[2px];
+    background: linear-gradient(
+      135deg,
+      rgba(143, 78, 0, 0.95) 0%,
+      rgba(255, 159, 67, 0.9) 45%,
+      rgba(198, 106, 26, 0.85) 100%
+    );
+    background-size: 200% 200%;
+    animation: food-frame-glow 3.2s ease-in-out infinite, food-frame-gradient 8s ease infinite;
+  }
+
+  .food-frame-inner {
+    @apply relative;
+  }
+
+  .food-carousel {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .food-carousel::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes food-frame-gradient {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes food-frame-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(143, 78, 0, 0.2),
+      0 0 20px rgba(255, 159, 67, 0.1),
+      0 10px 28px rgba(29, 27, 26, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(255, 159, 67, 0.4),
+      0 0 28px rgba(143, 78, 0, 0.16),
+      0 14px 36px rgba(29, 27, 26, 0.08);
+  }
 }
 
 /* Primary CTA shimmer on hover — applied via group */

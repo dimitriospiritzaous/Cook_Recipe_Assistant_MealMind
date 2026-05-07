@@ -1,5 +1,3 @@
-import { GlowButton } from './glow-button';
-
 const PRO_BULLETS = [
   'Unlimited AI recipes',
   'Personalized nutrition angle',
@@ -12,7 +10,7 @@ const PAID_PLANS = [
   {
     id: 'monthly',
     name: 'Monthly',
-    price: '$20.00',
+    price: '$20',
     unit: '/month',
     caption: 'Billed every month',
     recommended: false,
@@ -20,17 +18,17 @@ const PAID_PLANS = [
   {
     id: 'three_month',
     name: '3 months',
-    price: '$50.00',
-    unit: '/3 mo',
-    caption: '~$16.67/mo · Save vs monthly',
+    price: '$50',
+    unit: ' total',
+    caption: 'About $16.67/mo · Save vs monthly',
     recommended: false,
   },
   {
     id: 'six_month',
     name: '6 months',
-    price: '$100.00',
-    unit: '/6 mo',
-    caption: '~$16.67/mo · Best value',
+    price: '$100',
+    unit: ' total',
+    caption: 'About $16.67/mo · Best value',
     recommended: true,
   },
 ] as const;
@@ -45,32 +43,15 @@ export function PricingSection() {
         <div className="max-w-2xl">
           <p className="font-body text-sm font-semibold uppercase tracking-wider text-primary">Pricing</p>
           <h2 className="mt-3 font-display text-3xl font-extrabold tracking-editorial text-on-surface md:text-4xl lg:text-[2.5rem] text-balance">
-            Start free. Upgrade when you want the full kitchen.
+            MealMind Pro — simple pricing in the app
           </h2>
           <p className="mt-4 font-body leading-relaxed text-on-surface-variant">
-            Prices match the in-app subscription screen—confirm before you publish live billing.
+            Billed in the app: $20/month, $50 for three months, or $100 for six months. Confirm with your live store before
+            launch.
           </p>
         </div>
 
         <div className="mt-16 flex flex-col gap-10">
-          <article className="flex flex-col rounded-card border border-outline-variant/15 bg-surface-paper p-10 shadow-ambient transition hover:shadow-lift">
-            <p className="font-body text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Free</p>
-            <p className="mt-2 font-display text-4xl font-extrabold text-on-surface md:text-5xl">
-              $0
-              <span className="text-xl font-semibold text-on-surface-variant">/forever</span>
-            </p>
-            <ul className="mt-10 flex flex-col gap-1 font-body text-on-surface-variant">
-              {['3 recipes per day', 'Basic search', 'Community access'].map((t) => (
-                <li key={t} className="border-l-2 border-primary/30 py-2.5 pl-4 leading-snug">
-                  {t}
-                </li>
-              ))}
-            </ul>
-            <GlowButton href="#download" className="mt-12 w-full sm:w-auto">
-              Download free
-            </GlowButton>
-          </article>
-
           <div>
             <p className="font-body text-sm font-semibold uppercase tracking-wider text-primary">MealMind Pro</p>
             <p className="mt-2 font-display text-2xl font-extrabold text-on-surface md:text-3xl">

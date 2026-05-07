@@ -6,7 +6,10 @@ import { useEffect, useState } from 'react';
 import { IconClose, IconMenu } from './icons';
 
 const nav = [
+  { href: '#story', label: 'Story' },
+  { href: '#watch', label: 'Watch' },
   { href: '#how-it-works', label: 'How it works' },
+  { href: '#guide', label: 'Guide' },
   { href: '#features', label: 'Features' },
   { href: '#pricing', label: 'Pricing' },
   { href: '#faq', label: 'FAQ' },
@@ -50,12 +53,14 @@ export function SiteHeader() {
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
+          <nav
+            className="hidden max-w-[min(100%,28rem)] flex-wrap items-center justify-end gap-x-0 gap-y-1 md:flex lg:max-w-none lg:flex-nowrap lg:gap-x-0.5"
+            aria-label="Primary">
             {nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="group relative px-3 py-2 font-body text-sm font-medium text-on-surface-variant transition hover:text-primary">
+                className="group relative px-2 py-2 font-body text-[13px] font-medium text-on-surface-variant transition hover:text-primary lg:px-3 lg:text-sm">
                 {item.label}
                 <span className="absolute inset-x-3 -bottom-px h-px scale-x-0 bg-gradient-to-r from-primary to-primary-container transition group-hover:scale-x-100" />
               </Link>

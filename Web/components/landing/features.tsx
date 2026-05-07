@@ -1,4 +1,4 @@
-import { IconHeart, IconLeaf, IconScan, IconSparkles } from './icons';
+import { IconHeart, IconLeaf, IconScan, IconSparkles, IconTarget } from './icons';
 
 const features = [
   {
@@ -6,6 +6,12 @@ const features = [
     description: 'Point the camera or choose a photo—MealMind reads what’s in frame so you type less.',
     Icon: IconScan,
     span: 'md:col-span-2',
+  },
+  {
+    title: 'Best-match flow',
+    description: 'Ingredients + time + meal type + cooking style narrow the field so the “right” dinners surface first—not buried on page nine.',
+    Icon: IconTarget,
+    span: '',
   },
   {
     title: 'AI curation',
@@ -40,8 +46,12 @@ export function FeaturesSection() {
         <div className="max-w-2xl">
           <p className="font-body text-sm font-semibold uppercase tracking-wider text-primary">Features</p>
           <h2 className="mt-3 font-display text-3xl font-extrabold tracking-editorial text-on-surface md:text-4xl lg:text-[2.5rem] text-balance">
-            Everything busy home cooks asked for—nothing that clutters the counter.
+            Depth where it matters—speed everywhere else.
           </h2>
+          <p className="mt-5 max-w-2xl font-body text-lg leading-relaxed text-on-surface-variant text-balance">
+            From the first scan to your saved favorites, MealMind is built for people who love food but hate spinning
+            their wheels at 6 p.m.
+          </p>
         </div>
         <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (

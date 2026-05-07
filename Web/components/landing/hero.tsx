@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { GlowButton, GlowButtonOutline } from './glow-button';
 
 const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=85';
+  'https://images.unsplash.com/photo-1761315414500-a72142016572?auto=format&fit=crop&w=1200&q=85';
 
 /** Matches outer `rounded-[2rem]` minus the 3px gradient padding so inner media aligns with the frame. */
 const HERO_PREVIEW_INNER_RADIUS = 'calc(2rem - 3px)';
@@ -27,11 +27,11 @@ export function HeroSection() {
             —without the decision fatigue.
           </h1>
           <p className="mt-7 font-body text-lg leading-relaxed text-on-surface-variant opacity-0-start animate-fade-up animate-delay-200 md:text-xl text-balance">
-            MealMind pairs your ingredients, time, and taste with ideas that feel editorial, not robotic. Scan the
-            fridge, set the mood, and get recipes worth making tonight.
+            MealMind is the app that asks what&apos;s in your kitchen <em className="not-italic text-on-surface/95">right now</em>, then
+            ranks ideas so the best match rises to the top—personalized, fast, and a little bit delightful.
           </p>
           <ul className="mt-9 flex flex-col gap-3 font-body text-on-surface-variant sm:flex-row sm:flex-wrap">
-            {['Ingredient-first flow', 'Smart time & style filters', 'Taste profile that learns you'].map(
+            {['Ingredient + photo capture', 'Time, meal & style filters', 'Taste profile that steers every pick'].map(
               (t, i) => (
                 <li
                   key={t}
@@ -79,7 +79,7 @@ export function HeroSection() {
                   style={{ borderRadius: HERO_PREVIEW_INNER_RADIUS }}>
                   <Image
                     src={HERO_IMAGE}
-                    alt="Colorful vegetable bowl—fresh ingredients styled like a lifestyle magazine"
+                    alt="Grilled pork with roasted potatoes—natural weeknight plate"
                     fill
                     className="object-cover transition duration-700 group-hover:scale-105"
                     style={{ borderRadius: HERO_PREVIEW_INNER_RADIUS }}
@@ -90,7 +90,7 @@ export function HeroSection() {
                   <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/20 bg-surface-paper/90 p-4 shadow-lift backdrop-blur-md">
                     <p className="font-display text-sm font-bold text-primary">Tonight&apos;s direction</p>
                     <p className="mt-1 font-body text-sm text-on-surface-variant">
-                      Potato · carrot · 30 min · sheet-pan cozy
+                      Pork · potato · 30 min · cozy roast
                     </p>
                   </div>
                 </div>

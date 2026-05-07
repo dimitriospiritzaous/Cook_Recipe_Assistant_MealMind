@@ -39,6 +39,16 @@ export function IconLeaf({ className = 'h-8 w-8' }: { className?: string }) {
   );
 }
 
+export function IconTarget({ className = 'h-8 w-8' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <circle cx="16" cy="16" r="11" stroke="currentColor" strokeWidth="2" />
+      <circle cx="16" cy="16" r="6" stroke="currentColor" strokeWidth="2" />
+      <circle cx="16" cy="16" r="2" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function IconHeart({ className = 'h-8 w-8' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -64,6 +74,15 @@ export function IconPlay({ className = 'h-6 w-6' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden>
       <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-12.41 7.118v-4.185l8.108-5.233zm0-2.186L3.61 2.734v4.185l8.108 5.233 2.302-2.302zM5.864 0L18.9 7.455v9.09L5.864 24V0z" />
+    </svg>
+  );
+}
+
+/** Circle play (video), distinct from the Google Play store mark. */
+export function IconPlayVideo({ className = 'h-8 w-8' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1.946-4.59L16.5 12 10.054 6.59v10.82z" />
     </svg>
   );
 }
