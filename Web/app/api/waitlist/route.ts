@@ -1,3 +1,7 @@
+/**
+ * Waitlist API — runs on Vercel as a Route Handler (no MealMind/backend server required).
+ * Configure SUPABASE_URL + SUPABASE_ANON_KEY in Vercel → Environment Variables.
+ */
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
@@ -33,9 +37,11 @@ export async function POST(request: Request) {
 
   const config = getSupabaseConfig();
   if (!config) {
-    console.error(
-      '[waitlist] Missing Supabase URL/anon key. Set SUPABASE_URL + SUPABASE_ANON_KEY, or EXPO_PUBLIC_* in RecipeApp/.env, or Web/.env.local.',
-    );
+    const vercelHint =
+      process.env.VERCEL === '1'
+        ? ' On Vercel: Project Settings → Environment Variables → SUPABASE_URL and SUPABASE_ANON_KEY → Redeploy.'
+        : ' Set SUPABASE_URL + SUPABASE_ANON_KEY (e.g. Web/.env.local or RecipeApp/.env for local dev).';
+    console.error(`[waitlist] Missing Supabase URL/anon key.${vercelHint}`);
     return NextResponse.json(
       { error: 'Waitlist is not configured yet. Try again soon.' },
       { status: 503 },
@@ -60,7 +66,7 @@ export async function POST(request: Request) {
       (typeof error.message === 'string' && error.message.includes('schema cache'))
     ) {
       console.error(
-        '[waitlist] Table missing or API schema stale. Run MealMind/App/RecipeApp/supabase/migrations/20260507120000_waitlist_signups.sql in Supabase SQL Editor.',
+        '[waitlist] Table missing or API schema stale. Run Web/supabase/migrations/20260507120000_waitlist_signups.sql (SQL only) in Supabase SQL Editor.',
         error,
       );
       return NextResponse.json(
