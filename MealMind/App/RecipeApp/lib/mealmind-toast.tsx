@@ -1,55 +1,66 @@
 import Toast, { BaseToast, type ToastConfig } from 'react-native-toast-message';
+import { useMemo } from 'react';
 
-import { MealMindColors } from '@/constants/mealmind-colors';
+import { useMealMindTheme } from '@/contexts/mealmind-theme-context';
 import { MealMindFonts } from '@/constants/mealmind-typography';
 
-const toastBaseStyle = {
-  backgroundColor: MealMindColors.surfaceContainerLowest,
-  height: undefined as number | undefined,
-  minHeight: 60,
-  paddingVertical: 12,
-};
+export function useMealmindToastConfig(): ToastConfig {
+  const { colors } = useMealMindTheme();
 
-const toastText1 = {
-  fontSize: 16,
-  fontFamily: MealMindFonts.labelSemibold,
-  color: MealMindColors.onSurface,
-};
-
-const toastText2 = {
-  fontSize: 14,
-  fontFamily: MealMindFonts.body,
-  color: MealMindColors.onSurfaceVariant,
-};
-
-export const mealmindToastConfig: ToastConfig = {
-  success: (props) => (
-    <BaseToast
-      {...props}
-      style={{
-        ...toastBaseStyle,
-        borderLeftColor: MealMindColors.primary,
-      }}
-      contentContainerStyle={{ paddingHorizontal: 16 }}
-      text1Style={toastText1}
-      text2Style={toastText2}
-      text2NumberOfLines={4}
-    />
-  ),
-  error: (props) => (
-    <BaseToast
-      {...props}
-      style={{
-        ...toastBaseStyle,
-        borderLeftColor: MealMindColors.error,
-      }}
-      contentContainerStyle={{ paddingHorizontal: 16 }}
-      text1Style={toastText1}
-      text2Style={toastText2}
-      text2NumberOfLines={6}
-    />
-  ),
-};
+  return useMemo(
+    () => ({
+      success: (props) => (
+        <BaseToast
+          {...props}
+          style={{
+            backgroundColor: colors.surfaceContainerLowest,
+            height: undefined as number | undefined,
+            minHeight: 60,
+            paddingVertical: 12,
+            borderLeftColor: colors.primary,
+          }}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          text1Style={{
+            fontSize: 16,
+            fontFamily: MealMindFonts.labelSemibold,
+            color: colors.onSurface,
+          }}
+          text2Style={{
+            fontSize: 14,
+            fontFamily: MealMindFonts.body,
+            color: colors.onSurfaceVariant,
+          }}
+          text2NumberOfLines={4}
+        />
+      ),
+      error: (props) => (
+        <BaseToast
+          {...props}
+          style={{
+            backgroundColor: colors.surfaceContainerLowest,
+            height: undefined as number | undefined,
+            minHeight: 60,
+            paddingVertical: 12,
+            borderLeftColor: colors.error,
+          }}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          text1Style={{
+            fontSize: 16,
+            fontFamily: MealMindFonts.labelSemibold,
+            color: colors.onSurface,
+          }}
+          text2Style={{
+            fontSize: 14,
+            fontFamily: MealMindFonts.body,
+            color: colors.onSurfaceVariant,
+          }}
+          text2NumberOfLines={6}
+        />
+      ),
+    }),
+    [colors],
+  );
+}
 
 export function showAuthSuccessToast(text1: string, text2?: string): void {
   Toast.show({
@@ -61,7 +72,6 @@ export function showAuthSuccessToast(text1: string, text2?: string): void {
   });
 }
 
-/** Short positive confirmation (e.g. "Saved to Favorites"). */
 export function showSuccessToast(text1: string, text2?: string): void {
   Toast.show({
     type: 'success',

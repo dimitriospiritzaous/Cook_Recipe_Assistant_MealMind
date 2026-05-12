@@ -1,36 +1,37 @@
 /**
  * App-wide theme hooks for navigation / legacy components.
- * MealMind palette: `constants/mealmind-colors.ts` (+ layout + typography).
+ * MealMind palette: `constants/mealmind-colors.ts` + `useMealMindTheme()`.
  */
 
 import { Platform } from 'react-native';
 
-import { MealMindColors } from './mealmind-colors';
+import { MEALMIND_PALETTE_DARK, MEALMIND_PALETTE_LIGHT } from './mealmind-colors';
 
-const tintColorLight = MealMindColors.primaryContainer;
-const tintColorDark = '#ff9f43';
+const tintColorLight = MEALMIND_PALETTE_LIGHT.primaryContainer;
+const tintColorDark = MEALMIND_PALETTE_DARK.primaryContainer;
 
 export const Colors = {
   light: {
-    text: MealMindColors.onSurface,
-    background: MealMindColors.surface,
+    text: MEALMIND_PALETTE_LIGHT.onSurface,
+    background: MEALMIND_PALETTE_LIGHT.surface,
     tint: tintColorLight,
-    icon: MealMindColors.onSurfaceVariant,
-    tabIconDefault: MealMindColors.onSurfaceVariant,
+    icon: MEALMIND_PALETTE_LIGHT.onSurfaceVariant,
+    tabIconDefault: MEALMIND_PALETTE_LIGHT.onSurfaceVariant,
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: MEALMIND_PALETTE_DARK.onSurface,
+    background: MEALMIND_PALETTE_DARK.surface,
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    icon: MEALMIND_PALETTE_DARK.onSurfaceVariant,
+    tabIconDefault: MEALMIND_PALETTE_DARK.onSurfaceVariant,
     tabIconSelected: tintColorDark,
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
+    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
     serif: 'ui-serif',
     rounded: 'ui-rounded',

@@ -2,22 +2,318 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FallbackRecipeImage } from '@/components/FallbackRecipeImage';
 import { MealMindScreen } from '@/components/mealmind';
-import { MealMindColors } from '@/constants/mealmind-colors';
-import { MealMindRadii, MealMindShadow, MealMindSpace } from '@/constants/mealmind-layout';
+import type { MealMindPalette } from '@/constants/mealmind-colors';
+import { mealMindAmbientShadow, MealMindRadii, MealMindSpace } from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
+import { useI18n } from '@/contexts/i18n-context';
+import { useMealMindColors } from '@/contexts/mealmind-theme-context';
 import { getFavoriteEntries, removeFavoriteRecipe, type FavoriteEntry } from '@/lib/favorites-storage';
 import { showErrorToast, showSuccessToast } from '@/lib/mealmind-toast';
- 
-/** Shared image height so featured and grid rows align visually. */
+
 const FAVORITES_CARD_IMAGE_HEIGHT = 220;
- 
+
+function createFavoritesStyles(colors: MealMindPalette) {
+  const amb = mealMindAmbientShadow(colors);
+  return StyleSheet.create({
+    shell: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: MealMindSpace.lg,
+      paddingVertical: MealMindSpace.md,
+      backgroundColor: `${colors.surface}CC`,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: `${colors.outlineVariant}26`,
+    },
+    topBarLeft: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: MealMindSpace.md,
+      minWidth: 0,
+    },
+    topTitle: {
+      flex: 1,
+      fontFamily: MealMindFonts.headlineExtraBold,
+      fontSize: 17,
+      letterSpacing: headlineTracking,
+      color: colors.primary,
+    },
+    iconBtn: {
+      padding: 4,
+    },
+    scroll: {
+      paddingHorizontal: MealMindSpace.lg,
+      paddingTop: MealMindSpace.lg,
+      paddingBottom: MealMindSpace.xl * 2,
+    },
+    inner: {
+      maxWidth: 1024,
+      width: '100%',
+      alignSelf: 'center',
+      gap: MealMindSpace.lg + 4,
+    },
+    pageHead: {
+      gap: MealMindSpace.sm,
+    },
+    pageHeadRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      gap: MealMindSpace.md,
+    },
+    headline: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 34,
+      lineHeight: 40,
+      letterSpacing: -0.68,
+      color: colors.onSurface,
+      flex: 1,
+    },
+    count: {
+      fontFamily: MealMindFonts.bodyMedium,
+      fontSize: 14,
+      color: colors.onSurfaceVariant,
+      marginBottom: 4,
+    },
+    accentBar: {
+      width: 64,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.primary,
+    },
+    filterRow: {
+      gap: MealMindSpace.sm,
+      paddingVertical: MealMindSpace.xs,
+      alignItems: 'center',
+    },
+    filterChip: {
+      paddingHorizontal: MealMindSpace.md + 4,
+      paddingVertical: MealMindSpace.sm + 4,
+      borderRadius: MealMindRadii.full,
+      borderWidth: 1.5,
+      minHeight: 40,
+      justifyContent: 'center',
+    },
+    filterChipOn: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary,
+    },
+    filterChipOff: {
+      backgroundColor: colors.surface,
+      borderColor: `${colors.outlineVariant}BB`,
+    },
+    filterChipText: {
+      fontFamily: MealMindFonts.bodyMedium,
+      fontSize: 14,
+      color: colors.onSurface,
+    },
+    filterChipTextOn: {
+      color: colors.onPrimary,
+    },
+    pressed: {
+      opacity: 0.94,
+    },
+    emptyState: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: MealMindSpace.xl * 1.5,
+      gap: MealMindSpace.md,
+    },
+    emptyIcon: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.secondaryContainer,
+    },
+    emptyTitle: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 22,
+      color: colors.onSurface,
+      textAlign: 'center',
+    },
+    emptyBody: {
+      fontFamily: MealMindFonts.body,
+      fontSize: 14,
+      lineHeight: 20,
+      color: colors.onSurfaceVariant,
+      textAlign: 'center',
+      maxWidth: 300,
+    },
+    emptyCta: {
+      marginTop: MealMindSpace.sm,
+      backgroundColor: colors.primary,
+      paddingHorizontal: MealMindSpace.lg,
+      paddingVertical: MealMindSpace.sm + 2,
+      borderRadius: MealMindRadii.full,
+    },
+    emptyCtaText: {
+      fontFamily: MealMindFonts.labelSemibold,
+      fontSize: 14,
+      color: colors.onPrimary,
+    },
+    featured: {
+      borderRadius: MealMindRadii.md,
+      overflow: 'hidden',
+      backgroundColor: colors.surfaceContainerLowest,
+      ...amb,
+    },
+    featuredImageWrap: {
+      height: FAVORITES_CARD_IMAGE_HEIGHT,
+      width: '100%',
+      position: 'relative',
+      backgroundColor: colors.surfaceContainerHigh,
+    },
+    featuredImage: {
+      width: '100%',
+      height: '100%',
+    },
+    featuredBottomScrim: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: '48%',
+    },
+    imageOverlayBottom: {
+      position: 'absolute',
+      left: MealMindSpace.lg,
+      right: MealMindSpace.lg,
+      bottom: MealMindSpace.lg,
+      gap: 6,
+      zIndex: 1,
+    },
+    overlayBadgeRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: MealMindSpace.xs,
+      marginBottom: 2,
+    },
+    overlayBadge: {
+      paddingHorizontal: MealMindSpace.sm,
+      paddingVertical: 3,
+      borderRadius: MealMindRadii.full,
+      backgroundColor: 'rgba(255,255,255,0.22)',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(255,255,255,0.35)',
+    },
+    overlayBadgeText: {
+      fontFamily: MealMindFonts.labelSemibold,
+      fontSize: 10,
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      color: 'rgba(255,255,255,0.95)',
+    },
+    overlayTitle: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 22,
+      lineHeight: 28,
+      color: '#ffffff',
+    },
+    overlayMetaLine: {
+      fontFamily: MealMindFonts.bodyMedium,
+      fontSize: 13,
+      color: 'rgba(255,255,255,0.85)',
+      marginTop: 2,
+    },
+    fabHeart: {
+      position: 'absolute',
+      top: MealMindSpace.md,
+      right: MealMindSpace.md,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: 'rgba(255,255,255,0.92)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...amb,
+      zIndex: 2,
+    },
+    grid: {
+      gap: MealMindSpace.lg,
+    },
+    compactCard: {
+      borderRadius: MealMindRadii.md,
+      overflow: 'hidden',
+      backgroundColor: colors.surfaceContainerLowest,
+      ...amb,
+    },
+    compactImageWrap: {
+      height: FAVORITES_CARD_IMAGE_HEIGHT,
+      width: '100%',
+      position: 'relative',
+      backgroundColor: colors.surfaceContainerHigh,
+    },
+    compactImage: {
+      width: '100%',
+      height: '100%',
+    },
+    compactBottomScrim: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: '48%',
+    },
+    imageOverlayBottomCompact: {
+      position: 'absolute',
+      left: MealMindSpace.md,
+      right: MealMindSpace.md,
+      bottom: MealMindSpace.md,
+      gap: 4,
+      zIndex: 1,
+    },
+    overlayKicker: {
+      fontFamily: MealMindFonts.labelSemibold,
+      fontSize: 10,
+      letterSpacing: 1.4,
+      textTransform: 'uppercase',
+      color: 'rgba(255,255,255,0.88)',
+      marginBottom: 2,
+    },
+    overlayTitleCompact: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 18,
+      lineHeight: 23,
+      color: '#ffffff',
+    },
+    overlayMetaLineCompact: {
+      fontFamily: MealMindFonts.bodyMedium,
+      fontSize: 12,
+      color: 'rgba(255,255,255,0.82)',
+      marginTop: 2,
+    },
+    fabHeartSm: {
+      position: 'absolute',
+      top: MealMindSpace.sm + 4,
+      right: MealMindSpace.sm + 4,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255,255,255,0.92)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 2,
+    },
+  });
+}
+
 export default function FavoritesScreen() {
   const router = useRouter();
+  const { t } = useI18n();
+  const colors = useMealMindColors();
+  const styles = useMemo(() => createFavoritesStyles(colors), [colors]);
   const [entries, setEntries] = useState<FavoriteEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -39,15 +335,18 @@ export default function FavoritesScreen() {
   const featured = entries[0];
   const compact = entries.slice(1);
 
-  const onRemove = useCallback(async (id: string) => {
-    try {
-      await removeFavoriteRecipe(id);
-      setEntries((prev) => prev.filter((e) => e.recipe.id !== id));
-      showSuccessToast('Removed from Favorites');
-    } catch (e) {
-      showErrorToast('Favorites', e instanceof Error ? e.message : 'Could not remove favorite.');
-    }
-  }, []);
+  const onRemove = useCallback(
+    async (id: string) => {
+      try {
+        await removeFavoriteRecipe(id);
+        setEntries((prev) => prev.filter((e) => e.recipe.id !== id));
+        showSuccessToast(t('favorites.removed'));
+      } catch (e) {
+        showErrorToast(t('favorites.title'), e instanceof Error ? e.message : 'Could not remove favorite.');
+      }
+    },
+    [t],
+  );
 
   return (
     <MealMindScreen scroll={false} contentBottomInset={0} showFooter={false}>
@@ -60,14 +359,14 @@ export default function FavoritesScreen() {
               hitSlop={12}
               onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
               style={styles.iconBtn}>
-              <MaterialIcons name="arrow-back" size={24} color={MealMindColors.primary} />
+              <MaterialIcons name="arrow-back" size={24} color={colors.primary} />
             </Pressable>
             <Text style={styles.topTitle} numberOfLines={1}>
-              Your Favorites
+              {t('favorites.title')}
             </Text>
           </View>
           <Pressable hitSlop={12} style={styles.iconBtn} accessibilityLabel="Search favorites">
-            <MaterialIcons name="search" size={24} color={MealMindColors.onSurface} />
+            <MaterialIcons name="search" size={24} color={colors.onSurface} />
           </Pressable>
         </View>
 
@@ -75,26 +374,24 @@ export default function FavoritesScreen() {
           <View style={styles.inner}>
             <View style={styles.pageHead}>
               <View style={styles.pageHeadRow}>
-                <Text style={styles.headline}>Your Favorites</Text>
-                <Text style={styles.count}>{entries.length} Recipes</Text>
+                <Text style={styles.headline}>{t('favorites.title')}</Text>
+                <Text style={styles.count}>{t('favorites.count', { n: entries.length })}</Text>
               </View>
               <View style={styles.accentBar} />
             </View>
- 
+
             {loaded && entries.length === 0 ? (
               <View style={styles.emptyState}>
                 <View style={styles.emptyIcon}>
-                  <MaterialIcons name="favorite-border" size={36} color={MealMindColors.primary} />
+                  <MaterialIcons name="favorite-border" size={36} color={colors.primary} />
                 </View>
-                <Text style={styles.emptyTitle}>No favorites yet</Text>
-                <Text style={styles.emptyBody}>
-                  Open a recipe and tap “Save to Favorites”. Your saved recipes will show up here.
-                </Text>
+                <Text style={styles.emptyTitle}>{t('favorites.emptyTitle')}</Text>
+                <Text style={styles.emptyBody}>{t('favorites.emptyBody')}</Text>
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => router.replace('/(tabs)')}
                   style={({ pressed }) => [styles.emptyCta, pressed && styles.pressed]}>
-                  <Text style={styles.emptyCtaText}>Find a Recipe</Text>
+                  <Text style={styles.emptyCtaText}>{t('favorites.findRecipe')}</Text>
                 </Pressable>
               </View>
             ) : null}
@@ -121,9 +418,9 @@ export default function FavoritesScreen() {
                   <View style={styles.imageOverlayBottom} pointerEvents="none">
                     {featured.recipe.tags.length > 0 ? (
                       <View style={styles.overlayBadgeRow}>
-                        {featured.recipe.tags.slice(0, 2).map((t) => (
-                          <View key={t.label} style={styles.overlayBadge}>
-                            <Text style={styles.overlayBadgeText}>{t.label}</Text>
+                        {featured.recipe.tags.slice(0, 2).map((tag) => (
+                          <View key={tag.label} style={styles.overlayBadge}>
+                            <Text style={styles.overlayBadgeText}>{tag.label}</Text>
                           </View>
                         ))}
                       </View>
@@ -141,7 +438,7 @@ export default function FavoritesScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Remove from favorites"
                     onPress={() => void onRemove(featured.recipe.id)}>
-                    <MaterialIcons name="favorite" size={22} color={MealMindColors.primary} />
+                    <MaterialIcons name="favorite" size={22} color={colors.primary} />
                   </Pressable>
                 </View>
               </Pressable>
@@ -184,7 +481,7 @@ export default function FavoritesScreen() {
                         accessibilityRole="button"
                         accessibilityLabel="Remove from favorites"
                         onPress={() => void onRemove(entry.recipe.id)}>
-                        <MaterialIcons name="favorite" size={20} color={MealMindColors.primary} />
+                        <MaterialIcons name="favorite" size={20} color={colors.primary} />
                       </Pressable>
                     </View>
                   </Pressable>
@@ -197,292 +494,3 @@ export default function FavoritesScreen() {
     </MealMindScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  shell: {
-    flex: 1,
-    backgroundColor: MealMindColors.surface,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: MealMindSpace.lg,
-    paddingVertical: MealMindSpace.md,
-    backgroundColor: `${MealMindColors.surface}CC`,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: `${MealMindColors.outlineVariant}26`,
-  },
-  topBarLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: MealMindSpace.md,
-    minWidth: 0,
-  },
-  topTitle: {
-    flex: 1,
-    fontFamily: MealMindFonts.headlineExtraBold,
-    fontSize: 17,
-    letterSpacing: headlineTracking,
-    color: MealMindColors.primary,
-  },
-  iconBtn: {
-    padding: 4,
-  },
-  scroll: {
-    paddingHorizontal: MealMindSpace.lg,
-    paddingTop: MealMindSpace.lg,
-    paddingBottom: MealMindSpace.xl * 2,
-  },
-  inner: {
-    maxWidth: 1024,
-    width: '100%',
-    alignSelf: 'center',
-    gap: MealMindSpace.lg + 4,
-  },
-  pageHead: {
-    gap: MealMindSpace.sm,
-  },
-  pageHeadRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: MealMindSpace.md,
-  },
-  headline: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: -0.68,
-    color: MealMindColors.onSurface,
-    flex: 1,
-  },
-  count: {
-    fontFamily: MealMindFonts.bodyMedium,
-    fontSize: 14,
-    color: MealMindColors.onSurfaceVariant,
-    marginBottom: 4,
-  },
-  accentBar: {
-    width: 64,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: MealMindColors.primary,
-  },
-  filterRow: {
-    gap: MealMindSpace.sm,
-    paddingVertical: MealMindSpace.xs,
-    alignItems: 'center',
-  },
-  filterChip: {
-    paddingHorizontal: MealMindSpace.md + 4,
-    paddingVertical: MealMindSpace.sm + 4,
-    borderRadius: MealMindRadii.full,
-    borderWidth: 1.5,
-    minHeight: 40,
-    justifyContent: 'center',
-  },
-  filterChipOn: {
-    borderColor: MealMindColors.primary,
-    backgroundColor: MealMindColors.primary,
-  },
-  filterChipOff: {
-    backgroundColor: MealMindColors.surface,
-    borderColor: `${MealMindColors.outlineVariant}BB`,
-  },
-  filterChipText: {
-    fontFamily: MealMindFonts.bodyMedium,
-    fontSize: 14,
-    color: MealMindColors.onSurface,
-  },
-  filterChipTextOn: {
-    color: MealMindColors.onPrimary,
-  },
-  pressed: {
-    opacity: 0.94,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: MealMindSpace.xl * 1.5,
-    gap: MealMindSpace.md,
-  },
-  emptyIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: MealMindColors.secondaryContainer,
-  },
-  emptyTitle: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 22,
-    color: MealMindColors.onSurface,
-    textAlign: 'center',
-  },
-  emptyBody: {
-    fontFamily: MealMindFonts.body,
-    fontSize: 14,
-    lineHeight: 20,
-    color: MealMindColors.onSurfaceVariant,
-    textAlign: 'center',
-    maxWidth: 300,
-  },
-  emptyCta: {
-    marginTop: MealMindSpace.sm,
-    backgroundColor: MealMindColors.primary,
-    paddingHorizontal: MealMindSpace.lg,
-    paddingVertical: MealMindSpace.sm + 2,
-    borderRadius: MealMindRadii.full,
-  },
-  emptyCtaText: {
-    fontFamily: MealMindFonts.labelSemibold,
-    fontSize: 14,
-    color: MealMindColors.onPrimary,
-  },
-  featured: {
-    borderRadius: MealMindRadii.md,
-    overflow: 'hidden',
-    backgroundColor: MealMindColors.surfaceContainerLowest,
-    ...MealMindShadow.ambient,
-  },
-  featuredImageWrap: {
-    height: FAVORITES_CARD_IMAGE_HEIGHT,
-    width: '100%',
-    position: 'relative',
-    backgroundColor: MealMindColors.surfaceContainerHigh,
-  },
-  featuredImage: {
-    width: '100%',
-    height: '100%',
-  },
-  featuredBottomScrim: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '48%',
-  },
-  imageOverlayBottom: {
-    position: 'absolute',
-    left: MealMindSpace.lg,
-    right: MealMindSpace.lg,
-    bottom: MealMindSpace.lg,
-    gap: 6,
-    zIndex: 1,
-  },
-  overlayBadgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: MealMindSpace.xs,
-    marginBottom: 2,
-  },
-  overlayBadge: {
-    paddingHorizontal: MealMindSpace.sm,
-    paddingVertical: 3,
-    borderRadius: MealMindRadii.full,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.35)',
-  },
-  overlayBadgeText: {
-    fontFamily: MealMindFonts.labelSemibold,
-    fontSize: 10,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.95)',
-  },
-  overlayTitle: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 22,
-    lineHeight: 28,
-    color: '#ffffff',
-  },
-  overlayMetaLine: {
-    fontFamily: MealMindFonts.bodyMedium,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 2,
-  },
-  fabHeart: {
-    position: 'absolute',
-    top: MealMindSpace.md,
-    right: MealMindSpace.md,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...MealMindShadow.ambient,
-    zIndex: 2,
-  },
-  grid: {
-    gap: MealMindSpace.lg,
-  },
-  compactCard: {
-    borderRadius: MealMindRadii.md,
-    overflow: 'hidden',
-    backgroundColor: MealMindColors.surfaceContainerLowest,
-    ...MealMindShadow.ambient,
-  },
-  compactImageWrap: {
-    height: FAVORITES_CARD_IMAGE_HEIGHT,
-    width: '100%',
-    position: 'relative',
-    backgroundColor: MealMindColors.surfaceContainerHigh,
-  },
-  compactImage: {
-    width: '100%',
-    height: '100%',
-  },
-  compactBottomScrim: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '48%',
-  },
-  imageOverlayBottomCompact: {
-    position: 'absolute',
-    left: MealMindSpace.md,
-    right: MealMindSpace.md,
-    bottom: MealMindSpace.md,
-    gap: 4,
-    zIndex: 1,
-  },
-  overlayKicker: {
-    fontFamily: MealMindFonts.labelSemibold,
-    fontSize: 10,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.88)',
-    marginBottom: 2,
-  },
-  overlayTitleCompact: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 18,
-    lineHeight: 23,
-    color: '#ffffff',
-  },
-  overlayMetaLineCompact: {
-    fontFamily: MealMindFonts.bodyMedium,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.82)',
-    marginTop: 2,
-  },
-  fabHeartSm: {
-    position: 'absolute',
-    top: MealMindSpace.sm + 4,
-    right: MealMindSpace.sm + 4,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2,
-  },
-});

@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { MealMindColors } from '@/constants/mealmind-colors';
+import type { MealMindPalette } from '@/constants/mealmind-colors';
 import { MealMindRadii, MealMindSpace } from '@/constants/mealmind-layout';
 import { MealMindFonts } from '@/constants/mealmind-typography';
+import { useMealMindColors } from '@/contexts/mealmind-theme-context';
 
 export type ChipItem = { id: string; label: string };
 
@@ -16,10 +18,67 @@ export type ChipRowProps = {
   edgeBleed?: boolean;
 };
 
-const OUTLINE_10 = `${MealMindColors.outlineVariant}1A`;
+function createChipStyles(colors: MealMindPalette) {
+  const outline10 = `${colors.outlineVariant}1A`;
+  return StyleSheet.create({
+    wrap: {
+      gap: MealMindSpace.sm,
+    },
+    section: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 18,
+      color: colors.onSurface,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: MealMindSpace.md,
+      paddingVertical: 4,
+      paddingRight: MealMindSpace.md,
+    },
+    rowEdgeBleed: {
+      paddingLeft: MealMindSpace.lg,
+      paddingRight: MealMindSpace.xl,
+    },
+    edgeBleed: {
+      marginHorizontal: -MealMindSpace.lg,
+    },
+    chip: {
+      paddingHorizontal: MealMindSpace.lg,
+      paddingVertical: MealMindSpace.sm + 2,
+      borderRadius: MealMindRadii.full,
+    },
+    chipIdle: {
+      backgroundColor: colors.surfaceContainerLow,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: outline10,
+    },
+    chipSelected: {
+      backgroundColor: colors.secondaryContainer,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'transparent',
+    },
+    chipPressed: {
+      opacity: 0.88,
+    },
+    chipText: {
+      fontFamily: MealMindFonts.bodyMedium,
+      fontSize: 15,
+    },
+    chipTextIdle: {
+      color: colors.onSurfaceVariant,
+    },
+    chipTextSelected: {
+      color: colors.onSecondaryContainer,
+    },
+  });
+}
 
 /** Horizontal chip row — secondary “pebble” chips (DESIGN.md); selected uses secondaryContainer. */
 export function ChipRow({ chips, selectedId, onSelect, sectionLabel, edgeBleed }: ChipRowProps) {
+  const colors = useMealMindColors();
+  const styles = useMemo(() => createChipStyles(colors), [colors]);
+
   const scroll = (
     <ScrollView
       horizontal
@@ -54,56 +113,3 @@ export function ChipRow({ chips, selectedId, onSelect, sectionLabel, edgeBleed }
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    gap: MealMindSpace.sm,
-  },
-  section: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 18,
-    color: MealMindColors.onSurface,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: MealMindSpace.md,
-    paddingVertical: 4,
-    paddingRight: MealMindSpace.md,
-  },
-  rowEdgeBleed: {
-    paddingLeft: MealMindSpace.lg,
-    paddingRight: MealMindSpace.xl,
-  },
-  edgeBleed: {
-    marginHorizontal: -MealMindSpace.lg,
-  },
-  chip: {
-    paddingHorizontal: MealMindSpace.lg,
-    paddingVertical: MealMindSpace.sm + 2,
-    borderRadius: MealMindRadii.full,
-  },
-  chipIdle: {
-    backgroundColor: MealMindColors.surfaceContainerLow,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: OUTLINE_10,
-  },
-  chipSelected: {
-    backgroundColor: MealMindColors.secondaryContainer,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'transparent',
-  },
-  chipPressed: {
-    opacity: 0.88,
-  },
-  chipText: {
-    fontFamily: MealMindFonts.bodyMedium,
-    fontSize: 15,
-  },
-  chipTextIdle: {
-    color: MealMindColors.onSurfaceVariant,
-  },
-  chipTextSelected: {
-    color: MealMindColors.onSecondaryContainer,
-  },
-});

@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useI18n } from '@/contexts/i18n-context';
 import {
   CALORIE_FOCUS_LABELS,
   COOKING_EXPERIENCE_LABELS,
@@ -23,9 +24,9 @@ function Chip({ label }: { label: string }) {
   );
 }
 
-function ChipRow({ items }: { items: string[] }) {
+function ChipRow({ items, emptyLabel }: { items: string[]; emptyLabel: string }) {
   if (items.length === 0) {
-    return <Text style={styles.emptyLine}>None selected</Text>;
+    return <Text style={styles.emptyLine}>{emptyLabel}</Text>;
   }
   return (
     <View style={styles.chipWrap}>
@@ -80,64 +81,68 @@ export function OnboardingProfileSummary({
   embedded = false,
 }: {
   profile: StoredProfile;
-  /** When nested under Profile “details”, hide the duplicated hero headline. */
+  /** When nested under Profile "details", hide the duplicated hero headline. */
   embedded?: boolean;
 }) {
+  const { t } = useI18n();
+
+  const none = t('onboarding.noneSelected');
+
   return (
     <View style={styles.root}>
       {!embedded ? (
         <View style={styles.hero}>
-          <Text style={styles.heroKicker}>PERSONALIZATION</Text>
-          <Text style={styles.heroTitle}>Your onboarding answers</Text>
-          <Text style={styles.heroSub}>What you shared in the 12-step wizard — synced to your account.</Text>
+          <Text style={styles.heroKicker}>{t('onboarding.summaryKicker')}</Text>
+          <Text style={styles.heroTitle}>{t('onboarding.summaryTitle')}</Text>
+          <Text style={styles.heroSub}>{t('onboarding.summarySub')}</Text>
         </View>
       ) : null}
 
-      <Section step="Step 1 of 12" title="Main goal" icon="flag">
+      <Section step={t('onboarding.stepOf', { n: 1, total: 12 })} title={t('onboarding.summaryGoal')} icon="flag">
         <AnswerLine text={WELLNESS_GOAL_LABELS[profile.wellnessGoal]} />
       </Section>
 
-      <Section step="Step 2 of 12" title="Diet" icon="restaurant-menu">
+      <Section step={t('onboarding.stepOf', { n: 2, total: 12 })} title={t('onboarding.summaryDiet')} icon="restaurant-menu">
         <AnswerLine text={DIETARY_LABELS[profile.dietaryPreference]} />
       </Section>
 
-      <Section step="Step 3 of 12" title="Cuisines you enjoy" icon="public">
-        <ChipRow items={profile.cuisines} />
+      <Section step={t('onboarding.stepOf', { n: 3, total: 12 })} title={t('onboarding.summaryCuisines')} icon="public">
+        <ChipRow items={profile.cuisines} emptyLabel={none} />
       </Section>
 
-      <Section step="Step 4 of 12" title="Allergies" icon="warning" subtitle="Safety exclusions">
-        <ChipRow items={profile.allergies} />
+      <Section step={t('onboarding.stepOf', { n: 4, total: 12 })} title={t('onboarding.summaryAllergies')} icon="warning" subtitle={t('onboarding.summarySafety')}>
+        <ChipRow items={profile.allergies} emptyLabel={none} />
       </Section>
 
-      <Section step="Step 5 of 12" title="Foods to avoid" icon="block">
-        <ChipRow items={profile.avoidFoods} />
+      <Section step={t('onboarding.stepOf', { n: 5, total: 12 })} title={t('onboarding.summaryAvoidFoods')} icon="block">
+        <ChipRow items={profile.avoidFoods} emptyLabel={none} />
       </Section>
 
-      <Section step="Step 6 of 12" title="Dislikes" icon="sentiment-dissatisfied">
-        <ChipRow items={profile.dislikes} />
+      <Section step={t('onboarding.stepOf', { n: 6, total: 12 })} title={t('onboarding.summaryDislikes')} icon="sentiment-dissatisfied">
+        <ChipRow items={profile.dislikes} emptyLabel={none} />
       </Section>
 
-      <Section step="Step 7 of 12" title="Cooking experience" icon="outdoor-grill">
+      <Section step={t('onboarding.stepOf', { n: 7, total: 12 })} title={t('onboarding.summaryExperience')} icon="outdoor-grill">
         <AnswerLine text={COOKING_EXPERIENCE_LABELS[profile.cookingExperience]} />
       </Section>
 
-      <Section step="Step 8 of 12" title="Kitchen equipment" icon="countertops">
-        <ChipRow items={profile.kitchenEquipment} />
+      <Section step={t('onboarding.stepOf', { n: 8, total: 12 })} title={t('onboarding.summaryEquipment')} icon="countertops">
+        <ChipRow items={profile.kitchenEquipment} emptyLabel={none} />
       </Section>
 
-      <Section step="Step 9 of 12" title="Cooking schedule" icon="calendar-today">
+      <Section step={t('onboarding.stepOf', { n: 9, total: 12 })} title={t('onboarding.summarySchedule')} icon="calendar-today">
         <AnswerLine text={COOKING_SCHEDULE_LABELS[profile.cookingSchedule] ?? profile.cookingSchedule} />
       </Section>
 
-      <Section step="Step 10 of 12" title="Flavor profile" icon="local-dining">
-        <ChipRow items={profile.flavorProfile.map((f) => f.charAt(0).toUpperCase() + f.slice(1))} />
+      <Section step={t('onboarding.stepOf', { n: 10, total: 12 })} title={t('onboarding.summaryFlavors')} icon="local-dining">
+        <ChipRow items={profile.flavorProfile.map((f) => f.charAt(0).toUpperCase() + f.slice(1))} emptyLabel={none} />
       </Section>
 
-      <Section step="Step 11 of 12" title="Spice level" icon="whatshot">
+      <Section step={t('onboarding.stepOf', { n: 11, total: 12 })} title={t('onboarding.summarySpice')} icon="whatshot">
         <AnswerLine text={SPICY_LEVEL_LABELS[profile.spicyLevel]} />
       </Section>
 
-      <Section step="Step 12 of 12" title="Calories" icon="balance">
+      <Section step={t('onboarding.stepOf', { n: 12, total: 12 })} title={t('onboarding.summaryCalories')} icon="balance">
         <AnswerLine text={CALORIE_FOCUS_LABELS[profile.calorieFocus]} />
       </Section>
     </View>

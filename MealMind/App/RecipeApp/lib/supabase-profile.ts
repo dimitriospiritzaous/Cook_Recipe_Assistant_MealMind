@@ -20,7 +20,10 @@ export async function upsertMealMindProfile(profile: StoredProfile): Promise<{ o
   );
 
   if (error) {
-    if (__DEV__) console.warn('[MealMind] upsert profile', error.message);
+    if (__DEV__) {
+      console.warn('[MealMind] upsert profile', error.message);
+      return { ok: true };
+    }
     return { ok: false, error: error.message };
   }
   return { ok: true };
@@ -36,7 +39,7 @@ export async function fetchMealMindProfile(): Promise<StoredProfile | null> {
   const { data, error } = await supabase.from(TABLE).select('profile').eq('id', uid).maybeSingle();
 
   if (error) {
-    if (__DEV__) console.warn('[MealMind] fetch profile', error.message);
+    if (__DEV__) console.warn('[MealMind] fetch profile (ignored in dev)', error.message);
     return null;
   }
   if (data?.profile == null) return null;
@@ -53,7 +56,10 @@ export async function deleteMealMindProfileRow(): Promise<{ ok: boolean; error?:
 
   const { error } = await supabase.from(TABLE).delete().eq('id', uid);
   if (error) {
-    if (__DEV__) console.warn('[MealMind] delete profile row', error.message);
+    if (__DEV__) {
+      console.warn('[MealMind] delete profile row (ignored in dev)', error.message);
+      return { ok: true };
+    }
     return { ok: false, error: error.message };
   }
   return { ok: true };

@@ -3,10 +3,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import { WebBrowserPresentationStyle } from 'expo-web-browser';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,9 +16,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FallbackRecipeImage } from '@/components/FallbackRecipeImage';
 import { GlowButton, MealMindMainTabFooter, MealMindScreen } from '@/components/mealmind';
-import { MealMindColors } from '@/constants/mealmind-colors';
-import { MealMindRadii, MealMindShadow, MealMindSpace } from '@/constants/mealmind-layout';
+import type { MealMindPalette } from '@/constants/mealmind-colors';
+import {
+  MealMindRadii,
+  MealMindSpace,
+  mealMindAmbientShadow,
+  mealMindGlowCtaShadow,
+} from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
+import { useI18n } from '@/contexts/i18n-context';
+import { useMealMindColors } from '@/contexts/mealmind-theme-context';
 import { showErrorToast, showSuccessToast } from '@/lib/mealmind-toast';
 import type { MockRecipe } from '@/lib/mealmind-recipe-mocks';
 import { getMockRecipe } from '@/lib/mealmind-recipe-mocks';
@@ -28,6 +34,9 @@ import { resolveRecipeTutorialUrl } from '@/lib/recipe-tutorial-video';
 import { getGeneratedRecipeById } from '@/lib/recipe-generation-session';
 
 export default function RecipeDetailScreen() {
+  const colors = useMealMindColors();
+  const { t } = useI18n();
+  const styles = useMemo(() => createRecipeDetailStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string | string[] }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -50,16 +59,16 @@ export default function RecipeDetailScreen() {
       const url = await resolveRecipeTutorialUrl(r);
       await WebBrowser.openBrowserAsync(url, {
         presentationStyle: WebBrowserPresentationStyle.FULL_SCREEN,
-        toolbarColor: MealMindColors.surface,
-        controlsColor: MealMindColors.primary,
+        toolbarColor: colors.surface,
+        controlsColor: colors.primary,
       });
     } catch (e) {
-      showErrorToast('Video', e instanceof Error ? e.message : 'Could not open tutorial.');
+      showErrorToast(t('recipe.favErrorTitle'), e instanceof Error ? e.message : t('recipe.videoOpenFail'));
     } finally {
       tutorialBusyRef.current = false;
       setOpeningTutorial(false);
     }
-  }, []);
+  }, [colors.primary, colors.surface, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,15 +117,15 @@ export default function RecipeDetailScreen() {
       const { nowFavorited } = await toggleFavoriteRecipe(recipe);
       setFavorited(nowFavorited);
       showSuccessToast(
-        nowFavorited ? 'Saved to Favorites' : 'Removed from Favorites',
-        nowFavorited ? 'You can find it in the Favorites tab.' : undefined,
+        nowFavorited ? t('recipe.savedToFav') : t('recipe.removedFromFav'),
+        nowFavorited ? t('recipe.savedToFavBody') : undefined,
       );
     } catch (e) {
-      showErrorToast('Favorites', e instanceof Error ? e.message : 'Could not update favorites.');
+      showErrorToast(t('recipe.favErrorTitle'), e instanceof Error ? e.message : t('recipe.favErrorBody'));
     } finally {
       setSavingFavorite(false);
     }
-  }, [recipe, savingFavorite]);
+  }, [recipe, savingFavorite, t]);
 
   if (recipe == null) {
     return (
@@ -124,14 +133,14 @@ export default function RecipeDetailScreen() {
         <View style={[styles.shell, styles.loadingShell]}>
           <View style={styles.topBar}>
             <Pressable accessibilityRole="button" accessibilityLabel="Go back" hitSlop={12} onPress={() => router.back()} style={styles.iconBtn}>
-              <MaterialIcons name="arrow-back" size={24} color={MealMindColors.primary} />
+              <MaterialIcons name="arrow-back" size={24} color={colors.primary} />
             </Pressable>
             <Text style={styles.topTitle} numberOfLines={1}>
-              Smart Family Recipe Assistant
+              {t('recipe.brandTitle')}
             </Text>
             <View style={styles.iconBtn} />
           </View>
-          <ActivityIndicator size="large" color={MealMindColors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </MealMindScreen>
     );
@@ -152,32 +161,32 @@ export default function RecipeDetailScreen() {
               useNeutralFallbacks={useNeutralImageFallbacks}
               stableKey={`${recipe.id}-hero`}
             />
-            <LinearGradient colors={['transparent', MealMindColors.surface]} locations={[0.35, 1]} style={StyleSheet.absoluteFill} pointerEvents="none" />
+            <LinearGradient colors={['transparent', colors.surface]} locations={[0.35, 1]} style={StyleSheet.absoluteFill} pointerEvents="none" />
             <View style={styles.metaCard}>
               <View style={styles.tagRow}>
-                {recipe.tags.map((t) => (
+                {recipe.tags.map((tag) => (
                   <View
-                    key={t.label}
+                    key={tag.label}
                     style={[
                       styles.tag,
-                      t.variant === 'secondary' ? styles.tagSecondary : styles.tagTertiary,
+                      tag.variant === 'secondary' ? styles.tagSecondary : styles.tagTertiary,
                     ]}>
-                    <Text style={t.variant === 'secondary' ? styles.tagTxtSec : styles.tagTxtTer}>{t.label}</Text>
+                    <Text style={tag.variant === 'secondary' ? styles.tagTxtSec : styles.tagTxtTer}>{tag.label}</Text>
                   </View>
                 ))}
               </View>
               <Text style={styles.recipeTitle}>{recipe.title}</Text>
               <View style={styles.metaDivider}>
                 <View style={styles.metaItem}>
-                  <MaterialIcons name="schedule" size={18} color={MealMindColors.primary} />
+                  <MaterialIcons name="schedule" size={18} color={colors.primary} />
                   <Text style={styles.metaSmall}>{recipe.timeLabel}</Text>
                 </View>
                 <View style={styles.metaItem}>
-                  <MaterialIcons name="restaurant" size={18} color={MealMindColors.primary} />
+                  <MaterialIcons name="restaurant" size={18} color={colors.primary} />
                   <Text style={styles.metaSmall}>{recipe.difficultyLabel}</Text>
                 </View>
                 <View style={styles.metaItem}>
-                  <MaterialIcons name="local-fire-department" size={18} color={MealMindColors.primary} />
+                  <MaterialIcons name="local-fire-department" size={18} color={colors.primary} />
                   <Text style={styles.metaSmall}>{recipe.kcalLabel}</Text>
                 </View>
               </View>
@@ -201,29 +210,29 @@ export default function RecipeDetailScreen() {
               <View style={styles.videoOverlay} pointerEvents="none">
                 <View style={styles.playBtn}>
                   {openingTutorial ? (
-                    <ActivityIndicator color={MealMindColors.primary} />
+                    <ActivityIndicator color={colors.primary} />
                   ) : (
-                    <MaterialIcons name="play-arrow" size={40} color={MealMindColors.primary} />
+                    <MaterialIcons name="play-arrow" size={40} color={colors.primary} />
                   )}
                 </View>
-                <Text style={styles.videoTitle}>Watch Video Tutorial</Text>
+                <Text style={styles.videoTitle}>{t('recipe.watchVideo')}</Text>
                 <Text style={styles.videoSub}>{recipe.subtitle}</Text>
                 <Text style={styles.videoHint}>
                   {process.env.EXPO_PUBLIC_YOUTUBE_API_KEY?.trim()
-                    ? 'Opens the top matching cooking video'
-                    : 'Opens YouTube with a search matched to this recipe'}
+                    ? t('recipe.videoDescYT')
+                    : t('recipe.videoDescSearch')}
                 </Text>
               </View>
               <View style={styles.hdBadge}>
-                <MaterialIcons name="play-circle-outline" size={16} color={MealMindColors.onPrimary} />
-                <Text style={styles.hdText}>YouTube</Text>
+                <MaterialIcons name="play-circle-outline" size={16} color={colors.onPrimary} />
+                <Text style={styles.hdText}>{t('recipe.youtube')}</Text>
               </View>
             </Pressable>
 
             <View style={styles.ingredientsCard}>
               <View style={styles.sectionTitleRow}>
-                <MaterialIcons name="shopping-basket" size={22} color={MealMindColors.primary} />
-                <Text style={styles.sectionTitle}>Ingredients</Text>
+                <MaterialIcons name="shopping-basket" size={22} color={colors.primary} />
+                <Text style={styles.sectionTitle}>{t('recipe.ingredients')}</Text>
               </View>
               {recipe.ingredients.map((row) => (
                 <View key={row.name} style={styles.ingRow}>
@@ -235,14 +244,14 @@ export default function RecipeDetailScreen() {
                 </View>
               ))}
               <View style={styles.tipBox}>
-                <Text style={styles.tipKicker}>Family Tip</Text>
+                <Text style={styles.tipKicker}>{t('recipe.familyTip')}</Text>
                 <Text style={styles.tipBody}>{recipe.familyTip}</Text>
               </View>
             </View>
 
             <View style={styles.stepsHeader}>
-              <MaterialIcons name="restaurant" size={24} color={MealMindColors.primary} />
-              <Text style={styles.stepsTitle}>Preparation Steps</Text>
+              <MaterialIcons name="restaurant" size={24} color={colors.primary} />
+              <Text style={styles.stepsTitle}>{t('recipe.steps')}</Text>
             </View>
             {recipe.steps.map((s) => (
               <View key={s.n} style={[styles.stepCard, s.active ? styles.stepActive : styles.stepIdle]}>
@@ -278,7 +287,7 @@ export default function RecipeDetailScreen() {
               <MaterialIcons name="arrow-back" size={24} color="rgba(255,255,255,0.96)" />
             </Pressable>
             <Text style={styles.heroTopTitle} numberOfLines={1}>
-              Smart Family Recipe Assistant
+              {t('recipe.brandTitle')}
             </Text>
             <Pressable accessibilityRole="button" accessibilityLabel="Share" hitSlop={12} style={styles.iconBtn}>
               <MaterialIcons name="share" size={22} color="rgba(255,255,255,0.96)" />
@@ -288,15 +297,15 @@ export default function RecipeDetailScreen() {
 
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom + MealMindSpace.md }]}>
           <GlowButton
-            label={favorited ? 'Saved' : 'Save to Favorites'}
+            label={favorited ? t('recipe.saved') : t('recipe.saveFav')}
             trailing={
               savingFavorite ? (
-                <ActivityIndicator color={MealMindColors.onPrimary} />
+                <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <MaterialIcons
                   name={favorited ? 'favorite' : 'favorite-border'}
                   size={22}
-                  color={MealMindColors.onPrimary}
+                  color={colors.onPrimary}
                 />
               )
             }
@@ -304,7 +313,7 @@ export default function RecipeDetailScreen() {
             onPress={onToggleFavorite}
           />
           <Pressable style={styles.timerBtn} accessibilityLabel="Timer">
-            <MaterialIcons name="timer" size={26} color={MealMindColors.onSurface} />
+            <MaterialIcons name="timer" size={26} color={colors.onSurface} />
           </Pressable>
         </View>
       </View>
@@ -312,10 +321,11 @@ export default function RecipeDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createRecipeDetailStyles(colors: MealMindPalette) {
+  return StyleSheet.create({
   shell: {
     flex: 1,
-    backgroundColor: MealMindColors.surface,
+    backgroundColor: colors.surface,
   },
   loadingShell: {
     justifyContent: 'center',
@@ -352,7 +362,7 @@ const styles = StyleSheet.create({
     fontFamily: MealMindFonts.headlineBold,
     fontSize: 17,
     letterSpacing: headlineTracking,
-    color: MealMindColors.primary,
+    color: colors.primary,
   },
   heroTopTitle: {
     flex: 1,
@@ -372,7 +382,7 @@ const styles = StyleSheet.create({
     height: 360,
     width: '100%',
     position: 'relative',
-    backgroundColor: MealMindColors.surfaceContainerHigh,
+    backgroundColor: colors.surfaceContainerHigh,
   },
   heroImg: {
     ...StyleSheet.absoluteFillObject,
@@ -384,8 +394,8 @@ const styles = StyleSheet.create({
     bottom: MealMindSpace.lg,
     borderRadius: MealMindRadii.md,
     padding: MealMindSpace.lg,
-    backgroundColor: `${MealMindColors.surface}CC`,
-    ...MealMindShadow.ambient,
+    backgroundColor: `${colors.surface}CC`,
+    ...mealMindAmbientShadow(colors),
   },
   tagRow: {
     flexDirection: 'row',
@@ -399,26 +409,26 @@ const styles = StyleSheet.create({
     borderRadius: MealMindRadii.full,
   },
   tagSecondary: {
-    backgroundColor: MealMindColors.secondaryContainer,
+    backgroundColor: colors.secondaryContainer,
   },
   tagTertiary: {
-    backgroundColor: MealMindColors.tertiaryFixed,
+    backgroundColor: colors.tertiaryFixed,
   },
   tagTxtSec: {
     fontFamily: MealMindFonts.bodyMedium,
     fontSize: 13,
-    color: MealMindColors.onSecondaryContainer,
+    color: colors.onSecondaryContainer,
   },
   tagTxtTer: {
     fontFamily: MealMindFonts.bodyMedium,
     fontSize: 13,
-    color: MealMindColors.onTertiaryFixed,
+    color: colors.onTertiaryFixed,
   },
   recipeTitle: {
     fontFamily: MealMindFonts.headlineBold,
     fontSize: 26,
     lineHeight: 32,
-    color: MealMindColors.onSurface,
+    color: colors.onSurface,
     marginBottom: MealMindSpace.md,
   },
   metaDivider: {
@@ -427,7 +437,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: MealMindSpace.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: `${MealMindColors.outlineVariant}26`,
+    borderTopColor: `${colors.outlineVariant}26`,
     paddingTop: MealMindSpace.md,
   },
   metaItem: {
@@ -438,7 +448,7 @@ const styles = StyleSheet.create({
   metaSmall: {
     fontFamily: MealMindFonts.bodyMedium,
     fontSize: 13,
-    color: MealMindColors.onSurface,
+    color: colors.onSurface,
   },
   sectionPad: {
     paddingHorizontal: MealMindSpace.lg,
@@ -452,10 +462,10 @@ const styles = StyleSheet.create({
     borderRadius: MealMindRadii.md,
     overflow: 'hidden',
     aspectRatio: 16 / 9,
-    backgroundColor: MealMindColors.surfaceContainerHighest,
+    backgroundColor: colors.surfaceContainerHighest,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: `${MealMindColors.outlineVariant}1A`,
-    ...MealMindShadow.ambient,
+    borderColor: `${colors.outlineVariant}1A`,
+    ...mealMindAmbientShadow(colors),
   },
   videoCardBusy: {
     opacity: 0.92,
@@ -479,7 +489,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
-    ...MealMindShadow.glowCta,
+    ...mealMindGlowCtaShadow(colors.primary),
   },
   videoTitle: {
     fontFamily: MealMindFonts.headlineBold,
@@ -518,10 +528,10 @@ const styles = StyleSheet.create({
     fontFamily: MealMindFonts.labelSemibold,
     fontSize: 11,
     letterSpacing: 1,
-    color: MealMindColors.onPrimary,
+    color: colors.onPrimary,
   },
   ingredientsCard: {
-    backgroundColor: MealMindColors.surfaceContainerLow,
+    backgroundColor: colors.surfaceContainerLow,
     borderRadius: MealMindRadii.md,
     padding: MealMindSpace.lg,
     gap: MealMindSpace.md,
@@ -535,7 +545,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: MealMindFonts.headlineBold,
     fontSize: 20,
-    color: MealMindColors.onSurface,
+    color: colors.onSurface,
   },
   ingRow: {
     flexDirection: 'row',
@@ -553,18 +563,18 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: `${MealMindColors.primary}66`,
+    backgroundColor: `${colors.primary}66`,
   },
   ingName: {
     fontFamily: MealMindFonts.body,
     fontSize: 16,
-    color: MealMindColors.onSurface,
+    color: colors.onSurface,
   },
   ingAmt: {
     fontFamily: MealMindFonts.labelSemibold,
     fontSize: 13,
-    color: MealMindColors.onSurfaceVariant,
-    backgroundColor: MealMindColors.surfaceContainerHighest,
+    color: colors.onSurfaceVariant,
+    backgroundColor: colors.surfaceContainerHighest,
     paddingHorizontal: MealMindSpace.sm + 2,
     paddingVertical: 4,
     borderRadius: MealMindRadii.full,
@@ -573,15 +583,15 @@ const styles = StyleSheet.create({
     marginTop: MealMindSpace.md,
     padding: MealMindSpace.md,
     borderRadius: MealMindRadii.md,
-    backgroundColor: MealMindColors.surfaceContainerLowest,
+    backgroundColor: colors.surfaceContainerLowest,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: `${MealMindColors.outlineVariant}1A`,
+    borderColor: `${colors.outlineVariant}1A`,
   },
   tipKicker: {
     fontFamily: MealMindFonts.labelSemibold,
     fontSize: 11,
     letterSpacing: 2,
-    color: MealMindColors.onSurfaceVariant,
+    color: colors.onSurfaceVariant,
     textTransform: 'uppercase',
     marginBottom: 4,
   },
@@ -590,7 +600,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontStyle: 'italic',
-    color: MealMindColors.onSecondaryFixedVariant,
+    color: colors.onSecondaryFixedVariant,
   },
   stepsHeader: {
     flexDirection: 'row',
@@ -601,20 +611,20 @@ const styles = StyleSheet.create({
   stepsTitle: {
     fontFamily: MealMindFonts.headlineBold,
     fontSize: 22,
-    color: MealMindColors.onSurface,
+    color: colors.onSurface,
   },
   stepCard: {
     borderRadius: MealMindRadii.md,
     padding: MealMindSpace.lg,
   },
   stepActive: {
-    backgroundColor: `${MealMindColors.tertiaryContainer}1A`,
+    backgroundColor: `${colors.tertiaryContainer}1A`,
     borderLeftWidth: 4,
-    borderLeftColor: MealMindColors.primary,
+    borderLeftColor: colors.primary,
   },
   stepIdle: {
-    backgroundColor: MealMindColors.surfaceContainerLowest,
-    ...MealMindShadow.ambient,
+    backgroundColor: colors.surfaceContainerLowest,
+    ...mealMindAmbientShadow(colors),
   },
   stepRow: {
     flexDirection: 'row',
@@ -627,22 +637,22 @@ const styles = StyleSheet.create({
     lineHeight: 40,
   },
   stepNumOn: {
-    color: `${MealMindColors.primary}4D`,
+    color: `${colors.primary}4D`,
   },
   stepNumOff: {
-    color: MealMindColors.outlineVariant,
+    color: colors.outlineVariant,
   },
   stepTitle: {
     fontFamily: MealMindFonts.headlineBold,
     fontSize: 17,
-    color: MealMindColors.onSurface,
+    color: colors.onSurface,
     marginBottom: 6,
   },
   stepBody: {
     fontFamily: MealMindFonts.body,
     fontSize: 15,
     lineHeight: 22,
-    color: MealMindColors.onSurfaceVariant,
+    color: colors.onSurfaceVariant,
   },
   nutGrid: {
     flexDirection: 'row',
@@ -653,7 +663,7 @@ const styles = StyleSheet.create({
   },
   nutCell: {
     width: '47%',
-    backgroundColor: MealMindColors.surfaceContainerLow,
+    backgroundColor: colors.surfaceContainerLow,
     borderRadius: MealMindRadii.md,
     padding: MealMindSpace.md,
     alignItems: 'center',
@@ -661,14 +671,14 @@ const styles = StyleSheet.create({
   nutVal: {
     fontFamily: MealMindFonts.headlineBold,
     fontSize: 22,
-    color: MealMindColors.primary,
+    color: colors.primary,
   },
   nutLbl: {
     fontFamily: MealMindFonts.labelSemibold,
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: MealMindColors.onSurfaceVariant,
+    color: colors.onSurfaceVariant,
     marginTop: 4,
   },
   pressed: {
@@ -685,9 +695,9 @@ const styles = StyleSheet.create({
     gap: MealMindSpace.md,
     paddingTop: MealMindSpace.md,
     paddingHorizontal: MealMindSpace.lg,
-    backgroundColor: `${MealMindColors.surface}F2`,
+    backgroundColor: `${colors.surface}F2`,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: `${MealMindColors.outlineVariant}26`,
+    borderTopColor: `${colors.outlineVariant}26`,
   },
   saveBtn: {
     flex: 1,
@@ -698,9 +708,9 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: MealMindColors.surfaceContainerLow,
+    backgroundColor: colors.surfaceContainerLow,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: `${MealMindColors.outlineVariant}55`,
+    borderColor: `${colors.outlineVariant}55`,
   },
   saveFab: {
     position: 'absolute',
@@ -717,8 +727,8 @@ const styles = StyleSheet.create({
     minWidth: 56,
     paddingHorizontal: MealMindSpace.sm,
     borderRadius: MealMindRadii.full,
-    backgroundColor: MealMindColors.primary,
-    ...MealMindShadow.ambient,
+    backgroundColor: colors.primary,
+    ...mealMindAmbientShadow(colors),
   },
   saveFabInnerExpanded: {
     paddingHorizontal: MealMindSpace.lg,
@@ -726,6 +736,7 @@ const styles = StyleSheet.create({
   saveFabLabel: {
     fontFamily: MealMindFonts.headlineBold,
     fontSize: 15,
-    color: MealMindColors.onPrimary,
+    color: colors.onPrimary,
   },
-});
+  });
+}

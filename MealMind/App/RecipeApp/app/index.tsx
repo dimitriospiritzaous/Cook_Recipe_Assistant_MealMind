@@ -1,9 +1,8 @@
 import { Redirect } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { MealMindColors } from '@/constants/mealmind-colors';
-import { syncFlowGateBeforeTabs } from '@/lib/flow-gate';
+
 import {
   getIntroSeen,
   getOnboardingComplete,
@@ -20,7 +19,20 @@ type BootTarget = 'signup' | 'intro' | 'tabs' | null;
  * Returning users hydrate progress from `profiles` and Supabase `user_metadata` so they skip the 12-step flow.
  * Without a session, user is sent to sign up first.
  */
+function createBootStyles(colors: MealMindPalette) {
+  return StyleSheet.create({
+    boot: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+    },
+  });
+}
+
 export default function Index() {
+  const colors = useMealMindColors();
+  const styles = useMemo(() => createBootStyles(colors), [colors]);
   const [target, setTarget] = useState<BootTarget>(null);
 
   useEffect(() => {
@@ -55,7 +67,7 @@ export default function Index() {
   if (target === null) {
     return (
       <View style={styles.boot}>
-        <ActivityIndicator size="large" color={MealMindColors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -70,12 +82,3 @@ export default function Index() {
 
   return <Redirect href="/(tabs)" />;
 }
-
-const styles = StyleSheet.create({
-  boot: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: MealMindColors.surface,
-  },
-});

@@ -1,10 +1,30 @@
 import type { PropsWithChildren, ReactNode } from 'react';
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { MealMindColors } from '@/constants/mealmind-colors';
+import type { MealMindPalette } from '@/constants/mealmind-colors';
+import { useMealMindColors } from '@/contexts/mealmind-theme-context';
 
 import { MealMindFooter } from './mealmind-footer';
+
+function createScreenStyles(colors: MealMindPalette) {
+  return StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    column: {
+      flex: 1,
+    },
+    fill: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
+  });
+}
 
 type MealMindScreenProps = PropsWithChildren<
   ViewProps & {
@@ -31,6 +51,8 @@ export function MealMindScreen({
   style,
   ...rest
 }: MealMindScreenProps) {
+  const colors = useMealMindColors();
+  const styles = useMemo(() => createScreenStyles(colors), [colors]);
   const paddingBottom = contentBottomInset;
   const footer =
     footerProp !== undefined ? footerProp : showFooter ? <MealMindFooter /> : null;
@@ -61,19 +83,3 @@ export function MealMindScreen({
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: MealMindColors.surface,
-  },
-  column: {
-    flex: 1,
-  },
-  fill: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-});

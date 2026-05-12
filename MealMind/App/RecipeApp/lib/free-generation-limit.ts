@@ -12,8 +12,9 @@ async function markFreeAiRecipeGenerationUsed(): Promise<void> {
   await AsyncStorage.setItem(USED_KEY, '1');
 }
 
-/** Pro (RevenueCat entitlement) bypasses the one-time free limit. */
+/** Pro (RevenueCat entitlement) bypasses the one-time free limit. Dev builds are always unlimited. */
 export async function canGenerateAiRecipes(): Promise<boolean> {
+  if (__DEV__) return true;
   await initRevenueCat();
   if (await refreshRevenueCatEntitlements()) {
     return true;
@@ -23,6 +24,7 @@ export async function canGenerateAiRecipes(): Promise<boolean> {
 
 /** Call after a successful AI batch so free users cannot run again. */
 export async function recordAiGenerationCompletedIfFreeTier(): Promise<void> {
+  if (__DEV__) return;
   await initRevenueCat();
   if (await refreshRevenueCatEntitlements()) {
     return;

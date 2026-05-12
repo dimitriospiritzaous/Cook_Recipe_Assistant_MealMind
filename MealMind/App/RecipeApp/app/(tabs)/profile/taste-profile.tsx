@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,9 +12,11 @@ import {
   spicyLevelLabel,
   WELLNESS_GOAL_LABELS,
 } from '@/constants/profile-display-labels';
-import { MealMindColors } from '@/constants/mealmind-colors';
-import { MealMindRadii, MealMindShadow, MealMindSpace } from '@/constants/mealmind-layout';
+import type { MealMindPalette } from '@/constants/mealmind-colors';
+import { MealMindRadii, MealMindSpace, mealMindAmbientShadow } from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
+import { useI18n } from '@/contexts/i18n-context';
+import { useMealMindColors } from '@/contexts/mealmind-theme-context';
 import type { StoredProfile } from '@/lib/profile-storage';
 import { getProfile } from '@/lib/profile-storage';
 
@@ -23,12 +25,16 @@ function TasteRow({
   value,
   icon,
   onPress,
+  colors,
 }: {
   kicker: string;
   value: string;
   icon: keyof typeof MaterialIcons.glyphMap;
   onPress: () => void;
+  colors: MealMindPalette;
 }) {
+  const styles = useMemo(() => createTasteStyles(colors), [colors]);
+
   return (
     <Pressable
       onPress={onPress}
@@ -36,7 +42,7 @@ function TasteRow({
       style={({ pressed }) => [styles.rowCard, pressed && styles.pressed]}>
       <View style={styles.rowLeft}>
         <View style={styles.iconBox}>
-          <MaterialIcons name={icon} size={22} color={MealMindColors.primary} />
+          <MaterialIcons name={icon} size={22} color={colors.primary} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.kicker}>{kicker}</Text>
@@ -45,7 +51,7 @@ function TasteRow({
           </Text>
         </View>
       </View>
-      <MaterialIcons name="chevron-right" size={22} color={MealMindColors.outlineVariant} />
+      <MaterialIcons name="chevron-right" size={22} color={colors.outlineVariant} />
     </Pressable>
   );
 }
@@ -53,6 +59,9 @@ function TasteRow({
 export default function ProfileTasteProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
+  const colors = useMealMindColors();
+  const styles = useMemo(() => createTasteStyles(colors), [colors]);
   const [p, setP] = useState<StoredProfile | null>(null);
 
   const load = useCallback(() => {
@@ -94,46 +103,45 @@ export default function ProfileTasteProfileScreen() {
     <MealMindScreen scroll={false} contentBottomInset={0} showFooter={false}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Pressable hitSlop={12} onPress={() => router.back()} style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}>
-          <MaterialIcons name="arrow-back" size={24} color={MealMindColors.primary} />
+          <MaterialIcons name="arrow-back" size={24} color={colors.primary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Taste Profile</Text>
+        <Text style={styles.headerTitle}>{t('taste.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
-            <MaterialIcons name="restaurant-menu" size={40} color={MealMindColors.onSecondaryContainer} />
+            <MaterialIcons name="restaurant-menu" size={40} color={colors.onSecondaryContainer} />
           </View>
-          <Text style={styles.heroTitle}>Refine Your Palate</Text>
-          <Text style={styles.heroSub}>
-            Update your preferences so MealMind can match recipes to how you cook and eat. Tap any row to open the
-            personalization wizard.
-          </Text>
+          <Text style={styles.heroTitle}>{t('taste.heroTitle')}</Text>
+          <Text style={styles.heroSub}>{t('taste.heroSub')}</Text>
         </View>
 
         <View style={{ gap: 12 }}>
           <TasteRow
-            kicker="Wellness Goal"
+            kicker={t('taste.wellnessGoal')}
             value={WELLNESS_GOAL_LABELS[profile.wellnessGoal]}
             icon="track-changes"
             onPress={goWizard}
+            colors={colors}
           />
           <TasteRow
-            kicker="Diet"
+            kicker={t('taste.diet')}
             value={DIETARY_PREFERENCE_LABELS[profile.dietaryPreference]}
             icon="eco"
             onPress={goWizard}
+            colors={colors}
           />
           <Pressable onPress={goWizard} style={({ pressed }) => [styles.tagCard, pressed && styles.pressed]}>
             <View style={styles.rowLeft}>
               <View style={styles.iconBox}>
-                <MaterialIcons name="public" size={22} color={MealMindColors.primary} />
+                <MaterialIcons name="public" size={22} color={colors.primary} />
               </View>
-              <Text style={styles.kicker}>Cuisines</Text>
+              <Text style={styles.kicker}>{t('taste.cuisines')}</Text>
             </View>
             <View style={styles.tagWrap}>
               {profile.cuisines.length === 0 ? (
-                <Text style={styles.emptyTags}>Tap to add cuisines</Text>
+                <Text style={styles.emptyTags}>{t('taste.addCuisines')}</Text>
               ) : (
                 profile.cuisines.map((c) => (
                   <View key={c} style={styles.tag}>
@@ -144,126 +152,131 @@ export default function ProfileTasteProfileScreen() {
             </View>
           </Pressable>
           <TasteRow
-            kicker="Cooking experience"
+            kicker={t('taste.cookingExperience')}
             value={COOKING_EXPERIENCE_LABELS[profile.cookingExperience]}
             icon="school"
             onPress={goWizard}
+            colors={colors}
           />
           <TasteRow
-            kicker="Spice level"
+            kicker={t('taste.spiceLevel')}
             value={spicyLevelLabel(profile.spicyLevel)}
             icon="whatshot"
             onPress={goWizard}
+            colors={colors}
           />
           <TasteRow
-            kicker="Calories"
+            kicker={t('taste.calories')}
             value={calorieFocusLabel(profile.calorieFocus)}
             icon="monitor-heart"
             onPress={goWizard}
+            colors={colors}
           />
         </View>
 
-        <Text style={styles.note}>Full tag editing for foods to avoid and dislikes is in the wizard.</Text>
+        <Text style={styles.note}>{t('taste.note')}</Text>
       </ScrollView>
     </MealMindScreen>
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: MealMindSpace.md,
-    paddingBottom: MealMindSpace.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: `${MealMindColors.outlineVariant}44`,
-    backgroundColor: MealMindColors.surface,
-  },
-  backBtn: { padding: 4 },
-  headerTitle: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 18,
-    color: MealMindColors.primary,
-    letterSpacing: headlineTracking,
-  },
-  scroll: { padding: 20, maxWidth: 672, width: '100%', alignSelf: 'center' },
-  hero: { alignItems: 'center', marginBottom: 28 },
-  heroIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: MealMindColors.secondaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    ...MealMindShadow.ambient,
-  },
-  heroTitle: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 26,
-    color: MealMindColors.onSurface,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  heroSub: {
-    fontFamily: MealMindFonts.body,
-    fontSize: 15,
-    lineHeight: 22,
-    color: MealMindColors.onSurfaceVariant,
-    textAlign: 'center',
-    maxWidth: 400,
-  },
-  rowCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: MealMindRadii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: `${MealMindColors.outlineVariant}44`,
-    backgroundColor: MealMindColors.surfaceContainerLowest,
-  },
-  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 },
-  iconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: MealMindRadii.md,
-    backgroundColor: MealMindColors.surfaceContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  kicker: {
-    fontFamily: MealMindFonts.labelSemibold,
-    fontSize: 11,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    color: MealMindColors.onSurfaceVariant,
-  },
-  value: { fontFamily: MealMindFonts.bodyMedium, fontSize: 16, color: MealMindColors.onSurface, marginTop: 2 },
-  tagCard: {
-    padding: 16,
-    borderRadius: MealMindRadii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: `${MealMindColors.outlineVariant}44`,
-    backgroundColor: MealMindColors.surfaceContainerLowest,
-    gap: 12,
-  },
-  tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginLeft: 54 },
-  tag: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: MealMindRadii.full,
-    backgroundColor: MealMindColors.secondaryContainer,
-  },
-  tagText: { fontFamily: MealMindFonts.labelSemibold, fontSize: 13, color: MealMindColors.onSecondaryContainer },
-  emptyTags: { fontFamily: MealMindFonts.body, fontSize: 14, color: MealMindColors.outline },
-  note: {
-    marginTop: 20,
-    fontFamily: MealMindFonts.body,
-    fontSize: 13,
-    color: MealMindColors.outline,
-    textAlign: 'center',
-  },
-  pressed: { opacity: 0.92 },
-});
+function createTasteStyles(colors: MealMindPalette) {
+  return StyleSheet.create({
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: MealMindSpace.md,
+      paddingBottom: MealMindSpace.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: `${colors.outlineVariant}44`,
+      backgroundColor: colors.surface,
+    },
+    backBtn: { padding: 4 },
+    headerTitle: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 18,
+      color: colors.primary,
+      letterSpacing: headlineTracking,
+    },
+    scroll: { padding: 20, maxWidth: 672, width: '100%', alignSelf: 'center' },
+    hero: { alignItems: 'center', marginBottom: 28 },
+    heroIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: colors.secondaryContainer,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+      ...mealMindAmbientShadow(colors),
+    },
+    heroTitle: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 26,
+      color: colors.onSurface,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    heroSub: {
+      fontFamily: MealMindFonts.body,
+      fontSize: 15,
+      lineHeight: 22,
+      color: colors.onSurfaceVariant,
+      textAlign: 'center',
+      maxWidth: 400,
+    },
+    rowCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 16,
+      borderRadius: MealMindRadii.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: `${colors.outlineVariant}44`,
+      backgroundColor: colors.surfaceContainerLowest,
+    },
+    rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 },
+    iconBox: {
+      width: 40,
+      height: 40,
+      borderRadius: MealMindRadii.md,
+      backgroundColor: colors.surfaceContainer,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    kicker: {
+      fontFamily: MealMindFonts.labelSemibold,
+      fontSize: 11,
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+      color: colors.onSurfaceVariant,
+    },
+    value: { fontFamily: MealMindFonts.bodyMedium, fontSize: 16, color: colors.onSurface, marginTop: 2 },
+    tagCard: {
+      padding: 16,
+      borderRadius: MealMindRadii.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: `${colors.outlineVariant}44`,
+      backgroundColor: colors.surfaceContainerLowest,
+      gap: 12,
+    },
+    tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginLeft: 54 },
+    tag: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: MealMindRadii.full,
+      backgroundColor: colors.secondaryContainer,
+    },
+    tagText: { fontFamily: MealMindFonts.labelSemibold, fontSize: 13, color: colors.onSecondaryContainer },
+    emptyTags: { fontFamily: MealMindFonts.body, fontSize: 14, color: colors.outline },
+    note: {
+      marginTop: 20,
+      fontFamily: MealMindFonts.body,
+      fontSize: 13,
+      color: colors.outline,
+      textAlign: 'center',
+    },
+    pressed: { opacity: 0.92 },
+  });
+}

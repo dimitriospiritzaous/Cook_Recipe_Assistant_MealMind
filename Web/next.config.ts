@@ -2,6 +2,27 @@ import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import type { NextConfig } from 'next';
 
+/*
+ * Node 25+ exposes globalThis.localStorage but it is non-functional unless
+ * --localstorage-file is configured. Libraries like @supabase/supabase-js
+ * detect `localStorage` and call getItem/setItem, which throws. Provide a
+ * no-op shim so SSR and route handlers don't crash.
+ */
+if (
+  typeof globalThis.localStorage === 'undefined' ||
+  typeof globalThis.localStorage?.getItem !== 'function'
+) {
+  const noop = () => null;
+  globalThis.localStorage = {
+    getItem: noop,
+    setItem: noop,
+    removeItem: noop,
+    clear: noop,
+    key: noop as unknown as (index: number) => string | null,
+    length: 0,
+  } as Storage;
+}
+
 /**
  * Reuse Supabase credentials from the Expo app during local dev when Web/.env.local
  * has not been created yet. Does not override vars already set by Next or the shell.

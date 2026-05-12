@@ -17,9 +17,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AuthSplitLayout } from '@/components/mealmind/auth-split-layout';
 import { AppleLogo, GlowButton, GoogleLogo, MealMindScreen } from '@/components/mealmind';
 import { SIGNUP_HERO_IMAGE } from '@/constants/auth-assets';
-import { MealMindColors } from '@/constants/mealmind-colors';
-import { MealMindRadii, MealMindShadow, MealMindSpace } from '@/constants/mealmind-layout';
+import type { MealMindPalette } from '@/constants/mealmind-colors';
+import { MealMindRadii, mealMindAmbientShadow, MealMindSpace } from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
+import { useI18n } from '@/contexts/i18n-context';
+import { useMealMindColors } from '@/contexts/mealmind-theme-context';
 import { getCountryLabel, getCountryPickerItems } from '@/lib/country-picker-data';
 import { detectCountryCodeFromDevice } from '@/lib/detect-country-from-location';
 import { navigateAfterSuccessfulAuth } from '@/lib/auth-after-signin';
@@ -27,11 +29,13 @@ import { showAuthSuccessToast } from '@/lib/mealmind-toast';
 import { signInWithOAuthProvider, signUpWithEmail } from '@/lib/supabase-auth';
 
 const FORM_MAX_WIDTH = 480;
-const OUTLINE_BORDER = `${MealMindColors.outlineVariant}26`;
 
 export default function SignUpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
+  const colors = useMealMindColors();
+  const styles = useMemo(() => createSignupStyles(colors), [colors]);
   const countryItems = useMemo(() => getCountryPickerItems(), []);
 
   const [email, setEmail] = useState('');
@@ -86,19 +90,19 @@ export default function SignUpScreen() {
     setError(null);
     const e = email.trim().toLowerCase();
     if (!e.includes('@')) {
-      setError('Please enter a valid email address.');
+      setError(t('signup.errEmail'));
       return;
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError(t('signup.errPassword'));
       return;
     }
     if (password !== confirm) {
-      setError('Passwords do not match.');
+      setError(t('signup.errConfirm'));
       return;
     }
     if (!acceptTerms) {
-      setError('Please accept the Terms and Privacy Policy.');
+      setError(t('signup.errTerms'));
       return;
     }
 
@@ -106,24 +110,24 @@ export default function SignUpScreen() {
     try {
       const result = await signUpWithEmail({ email: e, password, countryCode });
       if (result.needsEmailConfirmation) {
-        showAuthSuccessToast('Account created', 'Confirm your email, then sign in below.');
+        showAuthSuccessToast(t('signup.successTitle'), t('signup.successBodyConfirm'));
         router.replace('/signin');
         return;
       }
       if (result.session) {
-        showAuthSuccessToast('Account created', 'Welcome to MealMind.');
+        showAuthSuccessToast(t('signup.successTitle'), t('signup.successBodyWelcome'));
         await navigateAfterSuccessfulAuth(router);
         return;
       }
-      showAuthSuccessToast('Account created', 'You can sign in with your email and password.');
+      showAuthSuccessToast(t('signup.successTitle'), t('signup.successBodySignin'));
       router.replace('/signin');
     } catch (err) {
       if (err instanceof Error) setError(err.message);
-      else setError('Something went wrong. Please try again.');
+      else setError(t('signup.errGeneric'));
     } finally {
       setSubmitting(false);
     }
-  }, [acceptTerms, confirm, countryCode, email, password, router]);
+  }, [acceptTerms, confirm, countryCode, email, password, router, t]);
 
   const goToSignIn = useCallback(() => {
     router.replace('/signin');
@@ -140,13 +144,13 @@ export default function SignUpScreen() {
         if (err instanceof Error) {
           setError(err.message);
         } else {
-          setError('Something went wrong. Please try again.');
+          setError(t('signup.errGeneric'));
         }
       } finally {
         setOauthBusy(false);
       }
     },
-    [router],
+    [router, t],
   );
 
   const stickyBottomPad = insets.bottom + MealMindSpace.lg;
@@ -164,36 +168,34 @@ export default function SignUpScreen() {
         showsVerticalScrollIndicator={false}>
         <View style={styles.inner}>
           <View style={styles.brandRow}>
-            <View style={[styles.brandDot, MealMindShadow.glowCta]}>
-              <MaterialIcons name="eco" size={18} color={MealMindColors.onPrimary} />
+            <View style={[styles.brandDot, mealMindAmbientShadow(colors)]}>
+              <MaterialIcons name="eco" size={18} color={colors.onPrimary} />
             </View>
             <Text style={styles.brand}>MealMind</Text>
           </View>
 
           <View style={styles.header}>
-            <Text style={styles.title}>Join the Hearth</Text>
-            <Text style={styles.subtitle}>
-              Begin your culinary journey today. We’ll help you curate your kitchen with mindful meal planning.
-            </Text>
+            <Text style={styles.title}>{t('signup.title')}</Text>
+            <Text style={styles.subtitle}>{t('signup.sub')}</Text>
           </View>
 
           {error ? (
             <View style={styles.errorCard}>
-              <MaterialIcons name="error-outline" size={18} color={MealMindColors.onErrorContainer} />
+              <MaterialIcons name="error-outline" size={18} color={colors.onErrorContainer} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
 
           <View style={styles.form}>
             <View style={styles.fieldBlock}>
-              <Text style={styles.label}>Email address</Text>
+              <Text style={styles.label}>{t('signup.email')}</Text>
               <View style={styles.field}>
-                <MaterialIcons name="mail-outline" size={20} color={MealMindColors.primary} />
+                <MaterialIcons name="mail-outline" size={20} color={colors.primary} />
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="chef@mealmind.com"
-                  placeholderTextColor={MealMindColors.outline}
+                  placeholder={t('signup.placeholderEmail')}
+                  placeholderTextColor={colors.outline}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -203,34 +205,34 @@ export default function SignUpScreen() {
             </View>
 
             <View style={styles.fieldBlock}>
-              <Text style={styles.label}>Location</Text>
+              <Text style={styles.label}>{t('signup.location')}</Text>
               <Pressable
                 accessibilityRole="button"
                 onPress={openCountryModal}
                 style={({ pressed }) => [styles.field, pressed && styles.pressed]}>
-                <MaterialIcons name="public" size={20} color={MealMindColors.primary} />
+                <MaterialIcons name="public" size={20} color={colors.primary} />
                 <Text
                   style={[styles.selectText, locationDetecting && styles.selectTextMuted]}
                   numberOfLines={1}>
-                  {locationDetecting ? 'Finding your location…' : getCountryLabel(countryCode)}
+                  {locationDetecting ? t('signup.detectingLocation') : getCountryLabel(countryCode)}
                 </Text>
                 {locationDetecting ? (
-                  <ActivityIndicator size="small" color={MealMindColors.primary} />
+                  <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
-                  <MaterialIcons name="expand-more" size={22} color={MealMindColors.onSurfaceVariant} />
+                  <MaterialIcons name="expand-more" size={22} color={colors.onSurfaceVariant} />
                 )}
               </Pressable>
             </View>
 
             <View style={styles.fieldBlock}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{t('signup.password')}</Text>
               <View style={styles.field}>
-                <MaterialIcons name="lock-outline" size={20} color={MealMindColors.primary} />
+                <MaterialIcons name="lock-outline" size={20} color={colors.primary} />
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
                   placeholder="••••••••"
-                  placeholderTextColor={MealMindColors.outline}
+                  placeholderTextColor={colors.outline}
                   secureTextEntry={!showPassword}
                   style={styles.input}
                 />
@@ -243,20 +245,20 @@ export default function SignUpScreen() {
                   <MaterialIcons
                     name={showPassword ? 'visibility-off' : 'visibility'}
                     size={22}
-                    color={MealMindColors.onSurfaceVariant}
+                    color={colors.onSurfaceVariant}
                   />
                 </Pressable>
               </View>
             </View>
             <View style={styles.fieldBlock}>
-              <Text style={styles.label}>Confirm</Text>
+              <Text style={styles.label}>{t('signup.confirm')}</Text>
               <View style={styles.field}>
-                <MaterialIcons name="shield" size={20} color={MealMindColors.primary} />
+                <MaterialIcons name="shield" size={20} color={colors.primary} />
                 <TextInput
                   value={confirm}
                   onChangeText={setConfirm}
                   placeholder="••••••••"
-                  placeholderTextColor={MealMindColors.outline}
+                  placeholderTextColor={colors.outline}
                   secureTextEntry={!showConfirm}
                   style={styles.input}
                 />
@@ -269,7 +271,7 @@ export default function SignUpScreen() {
                   <MaterialIcons
                     name={showConfirm ? 'visibility-off' : 'visibility'}
                     size={22}
-                    color={MealMindColors.onSurfaceVariant}
+                    color={colors.onSurfaceVariant}
                   />
                 </Pressable>
               </View>
@@ -281,16 +283,14 @@ export default function SignUpScreen() {
               onPress={() => setAcceptTerms((v) => !v)}
               style={({ pressed }) => [styles.termsRow, pressed && styles.pressed]}>
               <View style={[styles.checkbox, acceptTerms && styles.checkboxOn]}>
-                {acceptTerms ? <MaterialIcons name="check" size={16} color={MealMindColors.onPrimary} /> : null}
+                {acceptTerms ? <MaterialIcons name="check" size={16} color={colors.onPrimary} /> : null}
               </View>
-              <Text style={styles.termsText}>
-                I agree to the <Text style={styles.link}>Terms</Text> and <Text style={styles.link}>Privacy</Text>.
-              </Text>
+              <Text style={styles.termsText}>{t('signup.terms')}</Text>
             </Pressable>
 
             <View style={styles.oauthDivider}>
               <View style={styles.oauthLine} />
-              <Text style={styles.oauthLabel}>Or join with</Text>
+              <Text style={styles.oauthLabel}>{t('signup.orJoinWith')}</Text>
               <View style={styles.oauthLine} />
             </View>
             <View style={styles.oauthRow}>
@@ -317,7 +317,7 @@ export default function SignUpScreen() {
                   (submitting || oauthBusy) && styles.oauthBtnDisabled,
                 ]}
                 onPress={() => void onOAuth('apple')}>
-                <AppleLogo size={22} color={MealMindColors.onSurface} />
+                <AppleLogo size={22} color={colors.onSurface} />
                 <Text style={styles.oauthBtnText}>Apple</Text>
               </Pressable>
             </View>
@@ -325,7 +325,7 @@ export default function SignUpScreen() {
 
           <View style={styles.footerCopy}>
             <Text style={styles.footerText}>
-              Already have an account? <Text style={styles.link} onPress={goToSignIn}>Sign in</Text>
+              {t('signup.footerPrefix')}<Text style={styles.link} onPress={goToSignIn}>{t('signup.footerLink')}</Text>
             </Text>
           </View>
         </View>
@@ -334,8 +334,8 @@ export default function SignUpScreen() {
       <View style={[styles.stickyBottom, { paddingBottom: stickyBottomPad }]}>
         <View style={styles.stickyInner}>
           <GlowButton
-            label={submitting ? 'Creating…' : oauthBusy ? 'Opening browser…' : 'Create account'}
-            trailing={<MaterialIcons name="arrow-forward" size={22} color={MealMindColors.onPrimary} />}
+            label={submitting ? t('signup.ctaBusy') : oauthBusy ? t('signup.ctaOAuth') : t('signup.cta')}
+            trailing={<MaterialIcons name="arrow-forward" size={22} color={colors.onPrimary} />}
             disabled={submitting || oauthBusy}
             onPress={() => void onSubmit()}
           />
@@ -349,16 +349,16 @@ export default function SignUpScreen() {
         onRequestClose={closeCountryModal}>
         <SafeAreaView style={styles.modalRoot} edges={['top', 'bottom']}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select your location</Text>
+            <Text style={styles.modalTitle}>{t('signup.selectLocation')}</Text>
             <Pressable hitSlop={12} onPress={closeCountryModal} style={styles.iconBtn}>
-              <MaterialIcons name="close" size={26} color={MealMindColors.primary} />
+              <MaterialIcons name="close" size={26} color={colors.primary} />
             </Pressable>
           </View>
           <TextInput
             value={countryQuery}
             onChangeText={setCountryQuery}
-            placeholder="Search"
-            placeholderTextColor={`${MealMindColors.onSurfaceVariant}99`}
+            placeholder={t('signup.searchLocation')}
+            placeholderTextColor={`${colors.onSurfaceVariant}99`}
             style={styles.modalSearch}
             autoCorrect={false}
             autoCapitalize="none"
@@ -381,7 +381,7 @@ export default function SignUpScreen() {
                     pressed && styles.modalRowPressed,
                   ]}>
                   <Text style={[styles.modalRowLabel, selected && styles.modalRowLabelSelected]}>{row.label}</Text>
-                  {selected ? <MaterialIcons name="check" size={22} color={MealMindColors.primary} /> : null}
+                  {selected ? <MaterialIcons name="check" size={22} color={colors.primary} /> : null}
                 </Pressable>
               );
             })}
@@ -396,8 +396,8 @@ export default function SignUpScreen() {
       <View style={styles.shell}>
         <AuthSplitLayout
           heroImageUri={SIGNUP_HERO_IMAGE}
-          heroTitle="The Art of No Waste."
-          heroSubtitle="Join a community of modern chefs turning every leftover into a culinary masterpiece.">
+          heroTitle={t('signup.heroTitle')}
+          heroSubtitle={t('signup.heroSub')}>
           {formBody}
         </AuthSplitLayout>
       </View>
@@ -405,183 +405,187 @@ export default function SignUpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  shell: { flex: 1, backgroundColor: MealMindColors.surface, overflow: 'hidden' },
-  formColumn: { flex: 1, overflow: 'hidden' },
-  formDecor: { ...StyleSheet.absoluteFillObject },
-  blobTL: {
-    position: 'absolute',
-    top: 80,
-    left: -110,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: MealMindColors.secondaryContainer,
-    opacity: 0.22,
-  },
-  blobBR: {
-    position: 'absolute',
-    bottom: 140,
-    right: -110,
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    backgroundColor: MealMindColors.primaryFixed,
-    opacity: 0.22,
-  },
-  scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: MealMindSpace.lg, paddingTop: MealMindSpace.xl },
-  inner: { width: '100%', maxWidth: FORM_MAX_WIDTH, alignSelf: 'center' },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: MealMindSpace.xl },
-  brandDot: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: MealMindColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brand: {
-    fontFamily: MealMindFonts.headlineExtraBold,
-    fontSize: 22,
-    color: MealMindColors.onSurface,
-    letterSpacing: headlineTracking,
-  },
-  header: { marginBottom: MealMindSpace.xl },
-  title: {
-    fontFamily: MealMindFonts.headlineExtraBold,
-    fontSize: 36,
-    letterSpacing: -0.8,
-    color: MealMindColors.onSurface,
-    marginBottom: 10,
-  },
-  subtitle: { fontFamily: MealMindFonts.body, fontSize: 16, lineHeight: 24, color: MealMindColors.onSurfaceVariant },
-  errorCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    backgroundColor: MealMindColors.errorContainer,
-    borderRadius: MealMindRadii.lg,
-    padding: MealMindSpace.lg,
-    marginBottom: MealMindSpace.lg,
-  },
-  errorText: { flex: 1, fontFamily: MealMindFonts.bodyMedium, fontSize: 14, lineHeight: 20, color: MealMindColors.onErrorContainer },
-  form: { gap: MealMindSpace.lg },
-  fieldBlock: { gap: 8 },
-  label: {
-    fontFamily: MealMindFonts.labelSemibold,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1.3,
-    color: MealMindColors.onSurfaceVariant,
-    marginLeft: 10,
-  },
-  field: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderRadius: MealMindRadii.full,
-    backgroundColor: MealMindColors.surfaceContainer,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: OUTLINE_BORDER,
-  },
-  input: { flex: 1, fontFamily: MealMindFonts.body, fontSize: 16, color: MealMindColors.onSurface },
-  selectText: { flex: 1, fontFamily: MealMindFonts.body, fontSize: 16, color: MealMindColors.onSurface },
-  selectTextMuted: { color: MealMindColors.onSurfaceVariant },
-  iconHit: { padding: 4, marginRight: -4 },
-  termsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 6, paddingVertical: 6 },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: `${MealMindColors.outlineVariant}CC`,
-    backgroundColor: MealMindColors.surfaceContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxOn: { backgroundColor: MealMindColors.primary, borderColor: 'transparent' },
-  termsText: { flex: 1, fontFamily: MealMindFonts.body, fontSize: 13, color: MealMindColors.onSurfaceVariant },
-  link: { fontFamily: MealMindFonts.labelSemibold, color: MealMindColors.primary },
-  oauthDivider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: MealMindSpace.md,
-    marginTop: MealMindSpace.md,
-  },
-  oauthLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: MealMindColors.surfaceContainerHigh },
-  oauthLabel: {
-    fontFamily: MealMindFonts.labelSemibold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    color: MealMindColors.outline,
-  },
-  oauthRow: { flexDirection: 'row', gap: MealMindSpace.md },
-  oauthBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: MealMindSpace.md,
-    borderRadius: MealMindRadii.full,
-    backgroundColor: MealMindColors.surfaceContainer,
-  },
-  oauthBtnDisabled: { opacity: 0.55 },
-  oauthBtnText: { fontFamily: MealMindFonts.labelSemibold, fontSize: 14, color: MealMindColors.onSurface },
-  footerCopy: { marginTop: 32, alignItems: 'center' },
-  footerText: { fontFamily: MealMindFonts.body, fontSize: 14, color: MealMindColors.onSurfaceVariant },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
-  stickyBottom: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: MealMindSpace.lg,
-    paddingTop: MealMindSpace.md,
-    backgroundColor: `${MealMindColors.surface}F2`,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: `${MealMindColors.outlineVariant}1A`,
-  },
-  stickyInner: { width: '100%', maxWidth: FORM_MAX_WIDTH, alignSelf: 'center' },
-  modalRoot: { flex: 1, backgroundColor: MealMindColors.surface },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: MealMindSpace.lg,
-    paddingVertical: MealMindSpace.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: `${MealMindColors.outlineVariant}33`,
-  },
-  modalTitle: { flex: 1, fontFamily: MealMindFonts.headlineBold, fontSize: 18, color: MealMindColors.onSurface },
-  iconBtn: { padding: 4 },
-  modalSearch: {
-    marginHorizontal: MealMindSpace.lg,
-    marginVertical: MealMindSpace.sm,
-    fontFamily: MealMindFonts.body,
-    fontSize: 16,
-    color: MealMindColors.onSurface,
-    backgroundColor: MealMindColors.surfaceContainerHigh,
-    borderRadius: MealMindRadii.md,
-    paddingHorizontal: MealMindSpace.md,
-    paddingVertical: MealMindSpace.sm,
-  },
-  modalList: { paddingBottom: MealMindSpace.xl },
-  modalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: MealMindSpace.md,
-    paddingHorizontal: MealMindSpace.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: `${MealMindColors.outlineVariant}1F`,
-  },
-  modalRowPressed: { backgroundColor: MealMindColors.surfaceContainerLow },
-  modalRowSelected: { backgroundColor: `${MealMindColors.primaryFixed}66` },
-  modalRowLabel: { flex: 1, fontFamily: MealMindFonts.body, fontSize: 16, color: MealMindColors.onSurface },
-  modalRowLabelSelected: { fontFamily: MealMindFonts.bodyMedium, color: MealMindColors.onPrimaryContainer },
-});
+function createSignupStyles(colors: MealMindPalette) {
+  const OUTLINE_BORDER = `${colors.outlineVariant}26`;
+
+  return StyleSheet.create({
+    shell: { flex: 1, backgroundColor: colors.surface, overflow: 'hidden' },
+    formColumn: { flex: 1, overflow: 'hidden' },
+    formDecor: { ...StyleSheet.absoluteFillObject },
+    blobTL: {
+      position: 'absolute',
+      top: 80,
+      left: -110,
+      width: 280,
+      height: 280,
+      borderRadius: 140,
+      backgroundColor: colors.secondaryContainer,
+      opacity: 0.22,
+    },
+    blobBR: {
+      position: 'absolute',
+      bottom: 140,
+      right: -110,
+      width: 340,
+      height: 340,
+      borderRadius: 170,
+      backgroundColor: colors.primaryFixed,
+      opacity: 0.22,
+    },
+    scroll: { flex: 1 },
+    scrollContent: { paddingHorizontal: MealMindSpace.lg, paddingTop: MealMindSpace.xl },
+    inner: { width: '100%', maxWidth: FORM_MAX_WIDTH, alignSelf: 'center' },
+    brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: MealMindSpace.xl },
+    brandDot: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    brand: {
+      fontFamily: MealMindFonts.headlineExtraBold,
+      fontSize: 22,
+      color: colors.onSurface,
+      letterSpacing: headlineTracking,
+    },
+    header: { marginBottom: MealMindSpace.xl },
+    title: {
+      fontFamily: MealMindFonts.headlineExtraBold,
+      fontSize: 36,
+      letterSpacing: -0.8,
+      color: colors.onSurface,
+      marginBottom: 10,
+    },
+    subtitle: { fontFamily: MealMindFonts.body, fontSize: 16, lineHeight: 24, color: colors.onSurfaceVariant },
+    errorCard: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
+      backgroundColor: colors.errorContainer,
+      borderRadius: MealMindRadii.lg,
+      padding: MealMindSpace.lg,
+      marginBottom: MealMindSpace.lg,
+    },
+    errorText: { flex: 1, fontFamily: MealMindFonts.bodyMedium, fontSize: 14, lineHeight: 20, color: colors.onErrorContainer },
+    form: { gap: MealMindSpace.lg },
+    fieldBlock: { gap: 8 },
+    label: {
+      fontFamily: MealMindFonts.labelSemibold,
+      fontSize: 12,
+      textTransform: 'uppercase',
+      letterSpacing: 1.3,
+      color: colors.onSurfaceVariant,
+      marginLeft: 10,
+    },
+    field: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 18,
+      paddingVertical: 14,
+      borderRadius: MealMindRadii.full,
+      backgroundColor: colors.surfaceContainer,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: OUTLINE_BORDER,
+    },
+    input: { flex: 1, fontFamily: MealMindFonts.body, fontSize: 16, color: colors.onSurface },
+    selectText: { flex: 1, fontFamily: MealMindFonts.body, fontSize: 16, color: colors.onSurface },
+    selectTextMuted: { color: colors.onSurfaceVariant },
+    iconHit: { padding: 4, marginRight: -4 },
+    termsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 6, paddingVertical: 6 },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: `${colors.outlineVariant}CC`,
+      backgroundColor: colors.surfaceContainer,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxOn: { backgroundColor: colors.primary, borderColor: 'transparent' },
+    termsText: { flex: 1, fontFamily: MealMindFonts.body, fontSize: 13, color: colors.onSurfaceVariant },
+    link: { fontFamily: MealMindFonts.labelSemibold, color: colors.primary },
+    oauthDivider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: MealMindSpace.md,
+      marginTop: MealMindSpace.md,
+    },
+    oauthLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.surfaceContainerHigh },
+    oauthLabel: {
+      fontFamily: MealMindFonts.labelSemibold,
+      fontSize: 10,
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+      color: colors.outline,
+    },
+    oauthRow: { flexDirection: 'row', gap: MealMindSpace.md },
+    oauthBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: MealMindSpace.md,
+      borderRadius: MealMindRadii.full,
+      backgroundColor: colors.surfaceContainer,
+    },
+    oauthBtnDisabled: { opacity: 0.55 },
+    oauthBtnText: { fontFamily: MealMindFonts.labelSemibold, fontSize: 14, color: colors.onSurface },
+    footerCopy: { marginTop: 32, alignItems: 'center' },
+    footerText: { fontFamily: MealMindFonts.body, fontSize: 14, color: colors.onSurfaceVariant },
+    pressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
+    stickyBottom: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      paddingHorizontal: MealMindSpace.lg,
+      paddingTop: MealMindSpace.md,
+      backgroundColor: `${colors.surface}F2`,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: `${colors.outlineVariant}1A`,
+    },
+    stickyInner: { width: '100%', maxWidth: FORM_MAX_WIDTH, alignSelf: 'center' },
+    modalRoot: { flex: 1, backgroundColor: colors.surface },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: MealMindSpace.lg,
+      paddingVertical: MealMindSpace.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: `${colors.outlineVariant}33`,
+    },
+    modalTitle: { flex: 1, fontFamily: MealMindFonts.headlineBold, fontSize: 18, color: colors.onSurface },
+    iconBtn: { padding: 4 },
+    modalSearch: {
+      marginHorizontal: MealMindSpace.lg,
+      marginVertical: MealMindSpace.sm,
+      fontFamily: MealMindFonts.body,
+      fontSize: 16,
+      color: colors.onSurface,
+      backgroundColor: colors.surfaceContainerHigh,
+      borderRadius: MealMindRadii.md,
+      paddingHorizontal: MealMindSpace.md,
+      paddingVertical: MealMindSpace.sm,
+    },
+    modalList: { paddingBottom: MealMindSpace.xl },
+    modalRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: MealMindSpace.md,
+      paddingHorizontal: MealMindSpace.lg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: `${colors.outlineVariant}1F`,
+    },
+    modalRowPressed: { backgroundColor: colors.surfaceContainerLow },
+    modalRowSelected: { backgroundColor: `${colors.primaryFixed}66` },
+    modalRowLabel: { flex: 1, fontFamily: MealMindFonts.body, fontSize: 16, color: colors.onSurface },
+    modalRowLabelSelected: { fontFamily: MealMindFonts.bodyMedium, color: colors.onPrimaryContainer },
+  });
+}
