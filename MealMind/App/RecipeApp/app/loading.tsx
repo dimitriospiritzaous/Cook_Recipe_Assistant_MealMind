@@ -2,14 +2,16 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 import { FallbackRecipeImage } from '@/components/FallbackRecipeImage';
 import { MealMindFlowHeader, MealMindScreen } from '@/components/mealmind';
-import { MealMindColors } from '@/constants/mealmind-colors';
-import { MealMindRadii, MealMindShadow, MealMindSpace } from '@/constants/mealmind-layout';
+import type { MealMindPalette } from '@/constants/mealmind-colors';
+import { MealMindRadii, MealMindSpace, mealMindAmbientShadow } from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
+import { useI18n } from '@/contexts/i18n-context';
+import { useMealMindColors } from '@/contexts/mealmind-theme-context';
 import { generateRecipesFromContext, resolveLoadingHeroFromPendingSearch } from '@/lib/ai-recipe-generate';
 import { canGenerateAiRecipes, recordAiGenerationCompletedIfFreeTier } from '@/lib/free-generation-limit';
 import { showErrorToast } from '@/lib/mealmind-toast';
@@ -33,14 +35,206 @@ const HERO_RING_INSET = (HERO_FRAME - HERO_RING) / 2;
 
 const STATUS_ROTATION_MS = 3400;
 
-const STATUS_LINES: readonly { headline: string; detail: string }[] = [
-  { headline: 'Finding the best meals for you', detail: 'Matching recipes to your ingredients and time.' },
-  { headline: 'Tuning flavors for you', detail: 'Weighing what works with what you have on hand.' },
-  { headline: 'Almost there', detail: 'Good food takes a moment—thanks for your patience.' },
-  { headline: 'Building your lineup', detail: 'Balancing taste, nutrition, and your cooking style.' },
-];
+const ROT_PREFIXES = ['loading.rot0', 'loading.rot1', 'loading.rot2', 'loading.rot3'] as const;
+
+function createLoadingStyles(colors: MealMindPalette) {
+  return StyleSheet.create({
+    shell: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    main: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: MealMindSpace.lg,
+    },
+    column: {
+      maxWidth: CONTENT_MAX,
+      width: '100%',
+      alignItems: 'center',
+      gap: MealMindSpace.md,
+    },
+    heroWrap: {
+      width: HERO_FRAME + 24,
+      height: HERO_FRAME + 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: MealMindSpace.sm,
+    },
+    heroFrame: {
+      width: HERO_FRAME,
+      height: HERO_FRAME,
+      borderRadius: HERO_FRAME / 2,
+      overflow: 'hidden',
+      backgroundColor: colors.surfaceContainerHigh,
+      borderWidth: 4,
+      borderColor: `${colors.surfaceContainerLowest}F2`,
+      ...mealMindAmbientShadow(colors),
+      position: 'relative',
+    },
+    heroImageLayer: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 1,
+      backgroundColor: colors.surfaceContainerHigh,
+    },
+    heroImg: {
+      width: '100%',
+      height: '100%',
+    },
+    heroPlaceholder: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: `${colors.surfaceContainerHigh}E6`,
+    },
+    heroRing: {
+      position: 'absolute',
+      left: HERO_RING_INSET,
+      top: HERO_RING_INSET,
+      width: HERO_RING,
+      height: HERO_RING,
+      borderRadius: HERO_RING / 2,
+      borderWidth: 3,
+      borderColor: colors.primary,
+    },
+    heroPlaceholderInner: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: MealMindSpace.sm,
+      paddingHorizontal: MealMindSpace.md,
+    },
+    heroPlaceholderHint: {
+      fontFamily: MealMindFonts.bodyMedium,
+      fontSize: 13,
+      letterSpacing: headlineTracking,
+      color: colors.onSurfaceVariant,
+      textAlign: 'center',
+    },
+    heroPlaceholderSub: {
+      fontFamily: MealMindFonts.body,
+      fontSize: 11,
+      lineHeight: 15,
+      color: colors.outline,
+      textAlign: 'center',
+      maxWidth: 216,
+    },
+    heroBadge: {
+      position: 'absolute',
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.surfaceContainerLowest,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...mealMindAmbientShadow(colors),
+    },
+    heroBadgeKcal: {
+      top: 10,
+      right: 2,
+    },
+    heroBadgeSpark: {
+      bottom: 14,
+      left: 0,
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+    },
+    copyBlock: {
+      alignItems: 'center',
+      gap: 6,
+      minHeight: 72,
+      paddingHorizontal: MealMindSpace.sm,
+    },
+    title: {
+      fontFamily: MealMindFonts.headlineExtraBold,
+      fontSize: 22,
+      lineHeight: 28,
+      letterSpacing: headlineTracking,
+      textAlign: 'center',
+      color: colors.onSurface,
+    },
+    subtitle: {
+      fontFamily: MealMindFonts.body,
+      fontSize: 14,
+      lineHeight: 20,
+      textAlign: 'center',
+      color: colors.onSurfaceVariant,
+      maxWidth: 340,
+    },
+    progressBlock: {
+      width: '100%',
+      gap: MealMindSpace.sm,
+      marginTop: MealMindSpace.sm,
+    },
+    track: {
+      width: '100%',
+      height: 10,
+      borderRadius: MealMindRadii.full,
+      backgroundColor: colors.surfaceContainerHigh,
+      overflow: 'hidden',
+    },
+    fillOuter: {
+      height: '100%',
+      borderRadius: MealMindRadii.full,
+      overflow: 'hidden',
+      minWidth: 0,
+    },
+    fillGradient: {
+      flex: 1,
+      width: '100%',
+      minHeight: 10,
+    },
+    progressMeta: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: MealMindSpace.md,
+    },
+    statusLeft: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 6,
+    },
+    statusTextCol: {
+      flex: 1,
+      gap: 2,
+    },
+    statusLabel: {
+      fontFamily: MealMindFonts.bodyMedium,
+      fontSize: 13,
+      color: colors.primary,
+    },
+    statusSub: {
+      fontFamily: MealMindFonts.body,
+      fontSize: 12,
+      lineHeight: 16,
+      color: colors.onSurfaceVariant,
+    },
+    percent: {
+      fontFamily: MealMindFonts.labelSemibold,
+      fontSize: 14,
+      letterSpacing: 0.5,
+      color: colors.onSurface,
+      marginTop: 1,
+    },
+  });
+}
 
 export default function LoadingScreen() {
+  const { t } = useI18n();
+  const colors = useMealMindColors();
+  const styles = useMemo(() => createLoadingStyles(colors), [colors]);
+  const statusLines = useMemo(
+    () =>
+      ROT_PREFIXES.map((prefix) => ({
+        headline: t(`${prefix}.headline`),
+        detail: t(`${prefix}.detail`),
+      })),
+    [t],
+  );
   const router = useRouter();
   const [heroUri, setHeroUri] = useState<string | null>(null);
   const [pct, setPct] = useState(0);
@@ -63,10 +257,7 @@ export default function LoadingScreen() {
         const allowed = await canGenerateAiRecipes();
         if (!allowed) {
           await clearPendingRecipeSearch();
-          showErrorToast(
-            'Free recipe used',
-            'You’ve already generated recipes on the free plan. Upgrade to MealMind Pro for unlimited AI meals.',
-          );
+          showErrorToast(t('home.freeLimitTitle'), t('home.freeLimitBody'));
           workDoneRef.current = true;
           setPct(100);
           if (!cancelled) {
@@ -112,7 +303,10 @@ export default function LoadingScreen() {
           }
         } catch (e) {
           await clearLastGeneratedRecipes();
-          showErrorToast('Recipes', e instanceof Error ? e.message : 'Could not generate recipes.');
+          showErrorToast(
+            t('loading.errorTitle'),
+            e instanceof Error ? e.message : t('loading.errorGenerate'),
+          );
         }
       }
       workDoneRef.current = true;
@@ -128,7 +322,7 @@ export default function LoadingScreen() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, t]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -148,10 +342,10 @@ export default function LoadingScreen() {
 
   useEffect(() => {
     const id = setInterval(() => {
-      setStatusIdx((i) => (i + 1) % STATUS_LINES.length);
+      setStatusIdx((i) => (i + 1) % statusLines.length);
     }, STATUS_ROTATION_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [statusLines.length]);
 
   useEffect(() => {
     if (heroUri == null) {
@@ -249,14 +443,14 @@ export default function LoadingScreen() {
     outputRange: [0, -8],
   });
 
-  const line = STATUS_LINES[statusIdx] ?? STATUS_LINES[0];
+  const line = statusLines[statusIdx] ?? statusLines[0];
   const pctLabel = Math.min(100, Math.round(pct));
   const showCapHint = !workDoneRef.current && pct >= PROGRESS_CAP_UNTIL_DONE - 0.5;
 
   return (
     <MealMindScreen scroll={false} contentBottomInset={0}>
       <View style={styles.shell}>
-        <MealMindFlowHeader title="Meal Planner" showBottomDivider />
+        <MealMindFlowHeader title={t('loading.title')} showBottomDivider />
 
         <View style={styles.main}>
           <View style={styles.column}>
@@ -264,9 +458,9 @@ export default function LoadingScreen() {
               <View style={styles.heroFrame}>
                 <LinearGradient
                   colors={[
-                    MealMindColors.surfaceContainerLowest,
-                    `${MealMindColors.secondaryContainer}CC`,
-                    MealMindColors.surfaceContainerHigh,
+                    colors.surfaceContainerLowest,
+                    `${colors.secondaryContainer}CC`,
+                    colors.surfaceContainerHigh,
                   ]}
                   locations={[0, 0.42, 1]}
                   start={{ x: 0.15, y: 0 }}
@@ -301,21 +495,17 @@ export default function LoadingScreen() {
                     ]}
                   />
                   <View style={styles.heroPlaceholderInner}>
-                    <ActivityIndicator size="large" color={MealMindColors.primary} />
-                    <Text style={styles.heroPlaceholderHint}>
-                      Finding a food photo for your search…
-                    </Text>
-                    <Text style={styles.heroPlaceholderSub}>
-                      Inspired by your ingredients—not a final recipe preview.
-                    </Text>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={styles.heroPlaceholderHint}>{t('loading.heroHint')}</Text>
+                    <Text style={styles.heroPlaceholderSub}>{t('loading.heroSub')}</Text>
                   </View>
                 </Animated.View>
               </View>
               <View style={[styles.heroBadge, styles.heroBadgeKcal]}>
-                <MaterialIcons name="local-fire-department" size={18} color={MealMindColors.primary} />
+                <MaterialIcons name="local-fire-department" size={18} color={colors.primary} />
               </View>
               <View style={[styles.heroBadge, styles.heroBadgeSpark]}>
-                <MaterialIcons name="auto-awesome" size={16} color={MealMindColors.secondary} />
+                <MaterialIcons name="auto-awesome" size={16} color={colors.secondary} />
               </View>
             </Animated.View>
 
@@ -328,7 +518,7 @@ export default function LoadingScreen() {
               <View style={styles.track}>
                 <View style={[styles.fillOuter, { width: `${pctLabel}%` }]}>
                   <LinearGradient
-                    colors={[MealMindColors.primary, MealMindColors.onPrimaryContainer]}
+                    colors={[colors.primary, colors.onPrimaryContainer]}
                     start={{ x: 0, y: 0.5 }}
                     end={{ x: 1, y: 0.5 }}
                     style={styles.fillGradient}
@@ -337,13 +527,13 @@ export default function LoadingScreen() {
               </View>
               <View style={styles.progressMeta}>
                 <View style={styles.statusLeft}>
-                  <MaterialIcons name="auto-awesome" size={16} color={MealMindColors.primary} />
+                  <MaterialIcons name="auto-awesome" size={16} color={colors.primary} />
                   <View style={styles.statusTextCol}>
                     <Text style={styles.statusLabel}>
-                      {showCapHint ? 'Still cooking up ideas…' : 'Curating your plate'}
+                      {showCapHint ? t('loading.statusStill') : t('loading.statusCurating')}
                     </Text>
                     {showCapHint ? (
-                      <Text style={styles.statusSub}>Recipes can take a little longer—hang tight.</Text>
+                      <Text style={styles.statusSub}>{t('loading.statusStillSub')}</Text>
                     ) : null}
                   </View>
                 </View>
@@ -356,187 +546,3 @@ export default function LoadingScreen() {
     </MealMindScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  shell: {
-    flex: 1,
-    backgroundColor: MealMindColors.surface,
-  },
-  main: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: MealMindSpace.lg,
-  },
-  column: {
-    maxWidth: CONTENT_MAX,
-    width: '100%',
-    alignItems: 'center',
-    gap: MealMindSpace.md,
-  },
-  heroWrap: {
-    width: HERO_FRAME + 24,
-    height: HERO_FRAME + 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: MealMindSpace.sm,
-  },
-  heroFrame: {
-    width: HERO_FRAME,
-    height: HERO_FRAME,
-    borderRadius: HERO_FRAME / 2,
-    overflow: 'hidden',
-    backgroundColor: MealMindColors.surfaceContainerHigh,
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.9)',
-    ...MealMindShadow.ambient,
-    position: 'relative',
-  },
-  heroImageLayer: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
-    backgroundColor: MealMindColors.surfaceContainerHigh,
-  },
-  heroImg: {
-    width: '100%',
-    height: '100%',
-  },
-  heroPlaceholder: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: `${MealMindColors.surfaceContainerHigh}E6`,
-  },
-  heroRing: {
-    position: 'absolute',
-    left: HERO_RING_INSET,
-    top: HERO_RING_INSET,
-    width: HERO_RING,
-    height: HERO_RING,
-    borderRadius: HERO_RING / 2,
-    borderWidth: 3,
-    borderColor: MealMindColors.primary,
-  },
-  heroPlaceholderInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: MealMindSpace.sm,
-    paddingHorizontal: MealMindSpace.md,
-  },
-  heroPlaceholderHint: {
-    fontFamily: MealMindFonts.bodyMedium,
-    fontSize: 13,
-    letterSpacing: headlineTracking,
-    color: MealMindColors.onSurfaceVariant,
-    textAlign: 'center',
-  },
-  heroPlaceholderSub: {
-    fontFamily: MealMindFonts.body,
-    fontSize: 11,
-    lineHeight: 15,
-    color: MealMindColors.outline,
-    textAlign: 'center',
-    maxWidth: 216,
-  },
-  heroBadge: {
-    position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: MealMindColors.surfaceContainerLowest,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...MealMindShadow.ambient,
-  },
-  heroBadgeKcal: {
-    top: 10,
-    right: 2,
-  },
-  heroBadgeSpark: {
-    bottom: 14,
-    left: 0,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-  },
-  copyBlock: {
-    alignItems: 'center',
-    gap: 6,
-    minHeight: 72,
-    paddingHorizontal: MealMindSpace.sm,
-  },
-  title: {
-    fontFamily: MealMindFonts.headlineExtraBold,
-    fontSize: 22,
-    lineHeight: 28,
-    letterSpacing: headlineTracking,
-    textAlign: 'center',
-    color: MealMindColors.onSurface,
-  },
-  subtitle: {
-    fontFamily: MealMindFonts.body,
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-    color: MealMindColors.onSurfaceVariant,
-    maxWidth: 340,
-  },
-  progressBlock: {
-    width: '100%',
-    gap: MealMindSpace.sm,
-    marginTop: MealMindSpace.sm,
-  },
-  track: {
-    width: '100%',
-    height: 10,
-    borderRadius: MealMindRadii.full,
-    backgroundColor: MealMindColors.surfaceContainerHigh,
-    overflow: 'hidden',
-  },
-  fillOuter: {
-    height: '100%',
-    borderRadius: MealMindRadii.full,
-    overflow: 'hidden',
-    minWidth: 0,
-  },
-  fillGradient: {
-    flex: 1,
-    width: '100%',
-    minHeight: 10,
-  },
-  progressMeta: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: MealMindSpace.md,
-  },
-  statusLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-  },
-  statusTextCol: {
-    flex: 1,
-    gap: 2,
-  },
-  statusLabel: {
-    fontFamily: MealMindFonts.bodyMedium,
-    fontSize: 13,
-    color: MealMindColors.primary,
-  },
-  statusSub: {
-    fontFamily: MealMindFonts.body,
-    fontSize: 12,
-    lineHeight: 16,
-    color: MealMindColors.onSurfaceVariant,
-  },
-  percent: {
-    fontFamily: MealMindFonts.labelSemibold,
-    fontSize: 14,
-    letterSpacing: 0.5,
-    color: MealMindColors.onSurface,
-    marginTop: 1,
-  },
-});

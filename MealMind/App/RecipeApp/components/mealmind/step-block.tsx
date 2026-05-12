@@ -1,8 +1,59 @@
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { MealMindColors } from '@/constants/mealmind-colors';
+import type { MealMindPalette } from '@/constants/mealmind-colors';
 import { MealMindRadii, MealMindSpace } from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
+import { useMealMindColors } from '@/contexts/mealmind-theme-context';
+
+function createStepBlockStyles(colors: MealMindPalette) {
+  return StyleSheet.create({
+    card: {
+      borderRadius: MealMindRadii.md,
+      padding: MealMindSpace.lg,
+      marginBottom: MealMindSpace.md,
+    },
+    cardIdle: {
+      backgroundColor: colors.surfaceContainerLowest,
+    },
+    cardActive: {
+      backgroundColor: `${colors.tertiaryContainer}33`,
+      borderLeftWidth: 4,
+      borderLeftColor: colors.primary,
+    },
+    inner: {
+      flexDirection: 'row',
+      gap: MealMindSpace.md,
+    },
+    index: {
+      fontFamily: MealMindFonts.headlineExtraBold,
+      fontSize: 36,
+      lineHeight: 40,
+      letterSpacing: headlineTracking,
+    },
+    indexActive: {
+      color: `${colors.primary}55`,
+    },
+    indexIdle: {
+      color: `${colors.outlineVariant}cc`,
+    },
+    copy: {
+      flex: 1,
+      gap: MealMindSpace.xs,
+    },
+    title: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 18,
+      color: colors.onSurface,
+    },
+    body: {
+      fontFamily: MealMindFonts.body,
+      fontSize: 16,
+      lineHeight: 24,
+      color: colors.onSurfaceVariant,
+    },
+  });
+}
 
 export type MealMindStepBlockProps = {
   stepNumber: number;
@@ -13,6 +64,8 @@ export type MealMindStepBlockProps = {
 };
 
 export function MealMindStepBlock({ stepNumber, title, instruction, active }: MealMindStepBlockProps) {
+  const colors = useMealMindColors();
+  const styles = useMemo(() => createStepBlockStyles(colors), [colors]);
   return (
     <View style={[styles.card, active ? styles.cardActive : styles.cardIdle]}>
       <View style={styles.inner}>
@@ -25,50 +78,3 @@ export function MealMindStepBlock({ stepNumber, title, instruction, active }: Me
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: MealMindRadii.md,
-    padding: MealMindSpace.lg,
-    marginBottom: MealMindSpace.md,
-  },
-  cardIdle: {
-    backgroundColor: MealMindColors.surfaceContainerLowest,
-  },
-  cardActive: {
-    backgroundColor: `${MealMindColors.tertiaryContainer}33`,
-    borderLeftWidth: 4,
-    borderLeftColor: MealMindColors.primary,
-  },
-  inner: {
-    flexDirection: 'row',
-    gap: MealMindSpace.md,
-  },
-  index: {
-    fontFamily: MealMindFonts.headlineExtraBold,
-    fontSize: 36,
-    lineHeight: 40,
-    letterSpacing: headlineTracking,
-  },
-  indexActive: {
-    color: `${MealMindColors.primary}55`,
-  },
-  indexIdle: {
-    color: `${MealMindColors.outlineVariant}cc`,
-  },
-  copy: {
-    flex: 1,
-    gap: MealMindSpace.xs,
-  },
-  title: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 18,
-    color: MealMindColors.onSurface,
-  },
-  body: {
-    fontFamily: MealMindFonts.body,
-    fontSize: 16,
-    lineHeight: 24,
-    color: MealMindColors.onSurfaceVariant,
-  },
-});

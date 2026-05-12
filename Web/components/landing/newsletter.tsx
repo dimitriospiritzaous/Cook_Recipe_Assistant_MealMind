@@ -16,7 +16,9 @@ export function NewsletterSection() {
 
     setStatus('loading');
     try {
-      const res = await fetch('/api/waitlist', {
+      // Absolute URL avoids edge cases with proxies, previews, or non-root mounts.
+      const url = new URL('/api/waitlist', window.location.origin).href;
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

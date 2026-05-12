@@ -14,24 +14,30 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MealMindColors } from '@/constants/mealmind-colors';
+import type { MealMindPalette } from '@/constants/mealmind-colors';
 import { MealMindRadii, MealMindShadow, MealMindSpace } from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
+import { useI18n } from '@/contexts/i18n-context';
+import { useMealMindColors } from '@/contexts/mealmind-theme-context';
 
 const { width: WIN_W } = Dimensions.get('window');
 const FRAME_W = WIN_W * 0.9;
 const FRAME_H = Math.min(520, FRAME_W * 1.15);
 
-const SIM_CHIPS = [
-  { id: 'tomato', label: 'Heirloom Tomato' },
-  { id: 'basil', label: 'Basil Leaves' },
-] as const;
+const SIM_CHIP_KEYS = ['tomato', 'basil'] as const;
+const SIM_CHIP_I18N: Record<(typeof SIM_CHIP_KEYS)[number], string> = {
+  tomato: 'scan.chipTomato',
+  basil: 'scan.chipBasil',
+};
 
 const HEADER_BG = 'rgba(254, 248, 245, 0.92)';
 
 export default function KitchenScanScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
+  const colors = useMealMindColors();
+  const styles = useMemo(() => createScanStyles(colors), [colors]);
   const params = useLocalSearchParams<{ imageUri?: string }>();
   const imageUri = useMemo(() => {
     const raw = params.imageUri;
@@ -89,17 +95,17 @@ export default function KitchenScanScreen() {
           hitSlop={12}
           onPress={() => router.back()}
           style={({ pressed }) => [styles.headerIcon, pressed && styles.pressed]}>
-          <MaterialIcons name="close" size={24} color={MealMindColors.primary} />
+          <MaterialIcons name="close" size={24} color={colors.primary} />
         </Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          Kitchen Scanner
+          {t('scan.title')}
         </Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Scanner settings"
           hitSlop={12}
           style={({ pressed }) => [styles.headerIcon, pressed && styles.pressed]}>
-          <MaterialIcons name="settings" size={24} color={MealMindColors.primary} />
+          <MaterialIcons name="settings" size={24} color={colors.primary} />
         </Pressable>
       </View>
 
@@ -113,17 +119,17 @@ export default function KitchenScanScreen() {
             <View style={[styles.corner, styles.cornerBR]} />
             <Animated.View style={[styles.scanLineWrap, { opacity: lineOpacity }]}>
               <LinearGradient
-                colors={['transparent', MealMindColors.primaryFixed, 'transparent']}
+                colors={['transparent', colors.primaryFixed, 'transparent']}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
                 style={styles.scanLine}
               />
             </Animated.View>
             <View style={styles.chipRow}>
-              {SIM_CHIPS.map((c) => (
-                <View key={c.id} style={styles.chip}>
+              {SIM_CHIP_KEYS.map((key) => (
+                <View key={key} style={styles.chip}>
                   <View style={styles.chipDot} />
-                  <Text style={styles.chipLabel}>{c.label.toUpperCase()}</Text>
+                  <Text style={styles.chipLabel}>{t(SIM_CHIP_I18N[key]).toUpperCase()}</Text>
                 </View>
               ))}
             </View>
@@ -131,8 +137,7 @@ export default function KitchenScanScreen() {
         </View>
 
         <Text style={styles.tip}>
-          Frame your ingredients clearly within the guide to scan them into your{' '}
-          <Text style={styles.tipAccent}>Pantry</Text>.
+          {t('scan.tip')}
         </Text>
       </View>
 
@@ -140,7 +145,7 @@ export default function KitchenScanScreen() {
         <View style={styles.captureRing} />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Continue to review ingredients"
+          accessibilityLabel={t('scan.continue')}
           onPress={() =>
             router.push({
               pathname: '/scan-review',
@@ -149,11 +154,11 @@ export default function KitchenScanScreen() {
           }
           style={({ pressed }) => [styles.captureBtn, pressed && styles.capturePressed]}>
           <LinearGradient
-            colors={[MealMindColors.primary, MealMindColors.primaryContainer]}
+            colors={[colors.primary, colors.primaryContainer]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.captureGradient}>
-            <MaterialIcons name="center-focus-strong" size={36} color={MealMindColors.onPrimary} />
+            <MaterialIcons name="center-focus-strong" size={36} color={colors.onPrimary} />
           </LinearGradient>
         </Pressable>
       </View>
@@ -164,172 +169,174 @@ export default function KitchenScanScreen() {
 const CORNER = 48;
 const CORNER_INSET = MealMindSpace.lg;
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: MealMindColors.surface,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: MealMindSpace.lg,
-    height: 56,
-    backgroundColor: HEADER_BG,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: `${MealMindColors.outlineVariant}33`,
-  },
-  headerIcon: {
-    padding: 4,
-    width: 40,
-    alignItems: 'center',
-  },
-  pressed: {
-    opacity: 0.72,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 18,
-    letterSpacing: headlineTracking,
-    color: MealMindColors.onSurface,
-  },
-  main: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: MealMindSpace.md,
-  },
-  frame: {
-    borderRadius: MealMindRadii.xl,
-    overflow: 'hidden',
-    backgroundColor: MealMindColors.surfaceContainer,
-    ...MealMindShadow.ambient,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: MealMindSpace.lg,
-  },
-  corner: {
-    position: 'absolute',
-    width: CORNER,
-    height: CORNER,
-    borderColor: MealMindColors.primaryFixed,
-    opacity: 0.72,
-  },
-  cornerTL: {
-    top: CORNER_INSET,
-    left: CORNER_INSET,
-    borderTopWidth: 2,
-    borderLeftWidth: 2,
-    borderTopLeftRadius: 4,
-  },
-  cornerTR: {
-    top: CORNER_INSET,
-    right: CORNER_INSET,
-    borderTopWidth: 2,
-    borderRightWidth: 2,
-    borderTopRightRadius: 4,
-  },
-  cornerBL: {
-    bottom: CORNER_INSET,
-    left: CORNER_INSET,
-    borderBottomWidth: 2,
-    borderLeftWidth: 2,
-    borderBottomLeftRadius: 4,
-  },
-  cornerBR: {
-    bottom: CORNER_INSET,
-    right: CORNER_INSET,
-    borderBottomWidth: 2,
-    borderRightWidth: 2,
-    borderBottomRightRadius: 4,
-  },
-  scanLineWrap: {
-    width: '88%',
-    alignItems: 'center',
-  },
-  scanLine: {
-    width: '100%',
-    height: 3,
-    borderRadius: 2,
-  },
-  chipRow: {
-    position: 'absolute',
-    bottom: MealMindSpace.xl,
-    left: MealMindSpace.md,
-    right: MealMindSpace.md,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: MealMindSpace.sm,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: MealMindSpace.md,
-    borderRadius: MealMindRadii.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.82)',
-    ...MealMindShadow.ambient,
-  },
-  chipDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: MealMindColors.secondaryFixed,
-  },
-  chipLabel: {
-    fontFamily: MealMindFonts.labelSemibold,
-    fontSize: 11,
-    letterSpacing: 0.2,
-    color: MealMindColors.onSurface,
-  },
-  tip: {
-    marginTop: MealMindSpace.lg,
-    paddingHorizontal: MealMindSpace.xl + 8,
-    textAlign: 'center',
-    fontFamily: MealMindFonts.bodyMedium,
-    fontSize: 14,
-    lineHeight: 20,
-    color: MealMindColors.onSurfaceVariant,
-  },
-  tipAccent: {
-    fontFamily: MealMindFonts.headlineBold,
-    color: MealMindColors.primary,
-  },
-  captureWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: MealMindSpace.sm,
-  },
-  captureRing: {
-    position: 'absolute',
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 1,
-    borderColor: `${MealMindColors.primary}33`,
-    transform: [{ scale: 1.2 }],
-  },
-  captureBtn: {
-    borderRadius: 40,
-    overflow: 'hidden',
-    ...MealMindShadow.glowCta,
-  },
-  capturePressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.94 }],
-  },
-  captureGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+function createScanStyles(colors: MealMindPalette) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: MealMindSpace.lg,
+      height: 56,
+      backgroundColor: HEADER_BG,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: `${colors.outlineVariant}33`,
+    },
+    headerIcon: {
+      padding: 4,
+      width: 40,
+      alignItems: 'center',
+    },
+    pressed: {
+      opacity: 0.72,
+    },
+    headerTitle: {
+      flex: 1,
+      textAlign: 'center',
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 18,
+      letterSpacing: headlineTracking,
+      color: colors.onSurface,
+    },
+    main: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: MealMindSpace.md,
+    },
+    frame: {
+      borderRadius: MealMindRadii.xl,
+      overflow: 'hidden',
+      backgroundColor: colors.surfaceContainer,
+      ...MealMindShadow.ambient,
+    },
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: MealMindSpace.lg,
+    },
+    corner: {
+      position: 'absolute',
+      width: CORNER,
+      height: CORNER,
+      borderColor: colors.primaryFixed,
+      opacity: 0.72,
+    },
+    cornerTL: {
+      top: CORNER_INSET,
+      left: CORNER_INSET,
+      borderTopWidth: 2,
+      borderLeftWidth: 2,
+      borderTopLeftRadius: 4,
+    },
+    cornerTR: {
+      top: CORNER_INSET,
+      right: CORNER_INSET,
+      borderTopWidth: 2,
+      borderRightWidth: 2,
+      borderTopRightRadius: 4,
+    },
+    cornerBL: {
+      bottom: CORNER_INSET,
+      left: CORNER_INSET,
+      borderBottomWidth: 2,
+      borderLeftWidth: 2,
+      borderBottomLeftRadius: 4,
+    },
+    cornerBR: {
+      bottom: CORNER_INSET,
+      right: CORNER_INSET,
+      borderBottomWidth: 2,
+      borderRightWidth: 2,
+      borderBottomRightRadius: 4,
+    },
+    scanLineWrap: {
+      width: '88%',
+      alignItems: 'center',
+    },
+    scanLine: {
+      width: '100%',
+      height: 3,
+      borderRadius: 2,
+    },
+    chipRow: {
+      position: 'absolute',
+      bottom: MealMindSpace.xl,
+      left: MealMindSpace.md,
+      right: MealMindSpace.md,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: MealMindSpace.sm,
+    },
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 8,
+      paddingHorizontal: MealMindSpace.md,
+      borderRadius: MealMindRadii.full,
+      backgroundColor: 'rgba(255, 255, 255, 0.82)',
+      ...MealMindShadow.ambient,
+    },
+    chipDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.secondaryFixed,
+    },
+    chipLabel: {
+      fontFamily: MealMindFonts.labelSemibold,
+      fontSize: 11,
+      letterSpacing: 0.2,
+      color: colors.onSurface,
+    },
+    tip: {
+      marginTop: MealMindSpace.lg,
+      paddingHorizontal: MealMindSpace.xl + 8,
+      textAlign: 'center',
+      fontFamily: MealMindFonts.bodyMedium,
+      fontSize: 14,
+      lineHeight: 20,
+      color: colors.onSurfaceVariant,
+    },
+    tipAccent: {
+      fontFamily: MealMindFonts.headlineBold,
+      color: colors.primary,
+    },
+    captureWrap: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: MealMindSpace.sm,
+    },
+    captureRing: {
+      position: 'absolute',
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      borderWidth: 1,
+      borderColor: `${colors.primary}33`,
+      transform: [{ scale: 1.2 }],
+    },
+    captureBtn: {
+      borderRadius: 40,
+      overflow: 'hidden',
+      ...MealMindShadow.glowCta,
+    },
+    capturePressed: {
+      opacity: 0.92,
+      transform: [{ scale: 0.94 }],
+    },
+    captureGradient: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+}

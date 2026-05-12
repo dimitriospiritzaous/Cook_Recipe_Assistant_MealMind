@@ -3,14 +3,16 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FallbackRecipeImage } from '@/components/FallbackRecipeImage';
 import { MealMindMainTabFooter, MealMindScreen, ProfileMenuButton } from '@/components/mealmind';
-import { MealMindColors } from '@/constants/mealmind-colors';
-import { MealMindRadii, MealMindShadow, MealMindSpace } from '@/constants/mealmind-layout';
+import type { MealMindPalette } from '@/constants/mealmind-colors';
+import { MealMindRadii, MealMindSpace, mealMindAmbientShadow } from '@/constants/mealmind-layout';
 import { MealMindFonts, headlineTracking } from '@/constants/mealmind-typography';
+import { useI18n } from '@/contexts/i18n-context';
+import { useMealMindColors } from '@/contexts/mealmind-theme-context';
 import { generateRecipesFromContext } from '@/lib/ai-recipe-generate';
 import { canGenerateAiRecipes } from '@/lib/free-generation-limit';
 import { EXPLORE_CATEGORY_CHIPS, type ExploreHomePresetSlug } from '@/lib/explore-category-home';
@@ -25,7 +27,6 @@ import {
 } from '@/lib/recipe-generation-session';
 
 const MAX_W = 1152;
-const OUTLINE_15 = `${MealMindColors.outlineVariant}24`;
 const MAX_AI_RECIPES = 12;
 
 function dedupeNewIds(existing: MockRecipe[], batch: MockRecipe[]): MockRecipe[] {
@@ -53,6 +54,7 @@ function RecipeOverlayCard({
   kcal,
   detail,
   onPress,
+  styles,
 }: {
   imageUri: string | undefined;
   useNeutralFallbacks?: boolean;
@@ -62,6 +64,7 @@ function RecipeOverlayCard({
   kcal?: string;
   detail?: string;
   onPress: () => void;
+  styles: ReturnType<typeof createResultsStyles>;
 }) {
   return (
     <Pressable
@@ -140,6 +143,9 @@ function shortTime(label: string): string {
 
 export default function ResultsScreen() {
   const router = useRouter();
+  const { t } = useI18n();
+  const colors = useMealMindColors();
+  const styles = useMemo(() => createResultsStyles(colors), [colors]);
   const [session, setSession] = useState<LastGeneratedSession | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   /** Explore chips that are visually selected — each tap toggles independently (multi-select). */
@@ -181,19 +187,16 @@ export default function ResultsScreen() {
       return;
     }
     if (!session.searchContext) {
-      showErrorToast('Recipes', 'Run Find My Meal on Home first, then you can load more ideas here.');
+      showErrorToast(t('results.errorTitle'), t('results.errorNoSession'));
       return;
     }
     if ((session.recipes?.length ?? 0) >= MAX_AI_RECIPES) {
-      showErrorToast('Recipes', 'List is full. Start a new search from Home.');
+      showErrorToast(t('results.errorTitle'), t('results.errorFull'));
       return;
     }
     void (async () => {
       if (!(await canGenerateAiRecipes())) {
-        showErrorToast(
-          'Free recipe used',
-          'More AI recipes require MealMind Pro. Upgrade for unlimited generations.',
-        );
+        showErrorToast(t('results.freeLimitTitle'), t('results.freeLimitBody'));
         router.push('/(tabs)/profile/subscription');
         return;
       }
@@ -204,7 +207,7 @@ export default function ResultsScreen() {
           excludeRecipeTitles: session.recipes.map((r) => r.title),
         });
         if (more.length === 0) {
-          showErrorToast('Recipes', 'Could not generate more. Check API keys or try again.');
+          showErrorToast(t('results.errorTitle'), t('results.errorGenerate'));
           return;
         }
         const added = dedupeNewIds(session.recipes, more);
@@ -226,7 +229,7 @@ export default function ResultsScreen() {
           setSession(next);
         }
       } catch (e) {
-        showErrorToast('Recipes', e instanceof Error ? e.message : 'Could not load more.');
+        showErrorToast(t('results.errorTitle'), e instanceof Error ? e.message : t('results.errorLoad'));
       } finally {
         setLoadingMore(false);
       }
@@ -239,18 +242,18 @@ export default function ResultsScreen() {
         <View style={styles.inner}>
           <View style={styles.topBar}>
             <View style={styles.topBarTitleCol}>
-              <Text style={styles.topBarKicker}>Cooking Assistant</Text>
-              <Text style={styles.topBarTitle}>MealMind</Text>
+              <Text style={styles.topBarKicker}>{t('results.topBarKicker')}</Text>
+              <Text style={styles.topBarTitle}>{t('results.topBarTitle')}</Text>
             </View>
             <ProfileMenuButton />
           </View>
 
           <View style={styles.pageHeader}>
-            <Text style={styles.headline}>Best Picks for You</Text>
+            <Text style={styles.headline}>{t('results.headline')}</Text>
             <Text style={styles.lead}>
               {featured
-                ? 'Generated from your profile, filters, and ingredients'
-                : 'Curated based on your seasonal preferences'}
+                ? t('results.leadIngredients')
+                : t('results.leadExplore')}
             </Text>
           </View>
 
@@ -264,6 +267,7 @@ export default function ResultsScreen() {
               kcal={featured.kcalLabel}
               detail={session?.cookingStyleLabel?.trim() || '—'}
               onPress={() => router.push(`/recipe/${featured.id}`)}
+              styles={styles}
             />
           ) : (
             <RecipeOverlayCard
@@ -274,6 +278,7 @@ export default function ResultsScreen() {
               kcal="420 kcal"
               detail="—"
               onPress={() => router.push(`/recipe/${RESULTS_FEATURED.id}`)}
+              styles={styles}
             />
           )}
 
@@ -289,6 +294,7 @@ export default function ResultsScreen() {
                   kcal={recipe.kcalLabel}
                   detail={session?.cookingStyleLabel?.trim() || '—'}
                   onPress={() => router.push(`/recipe/${recipe.id}`)}
+                  styles={styles}
                 />
               ))
             : (
@@ -302,6 +308,7 @@ export default function ResultsScreen() {
                     kcal="320 kcal"
                     detail="—"
                     onPress={() => router.push(`/recipe/${RESULTS_SECONDARY[0].id}`)}
+                    styles={styles}
                   />
                   <RecipeOverlayCard
                     key="mock-b"
@@ -312,6 +319,7 @@ export default function ResultsScreen() {
                     kcal="280 kcal"
                     detail="—"
                     onPress={() => router.push(`/recipe/${RESULTS_SECONDARY[1].id}`)}
+                    styles={styles}
                   />
                 </>
               )}
@@ -326,11 +334,12 @@ export default function ResultsScreen() {
                 time={item.time}
                 detail={item.note}
                 onPress={() => {}}
+                styles={styles}
               />
             ))}
 
           <View style={styles.loadMoreSection}>
-            <Text style={styles.categoryTitle}>Explore More Categories</Text>
+            <Text style={styles.categoryTitle}>{t('results.exploreMore')}</Text>
             <View style={styles.categoryWrap}>
               {EXPLORE_CATEGORY_CHIPS.map(({ label, slug }) => {
                 const selected = selectedExploreSlugs.includes(slug);
@@ -364,11 +373,11 @@ export default function ResultsScreen() {
                 (!canLoadMore || loadingMore) && styles.loadMoreBtnDisabled,
               ]}>
               {loadingMore ? (
-                <ActivityIndicator color={MealMindColors.onPrimary} />
+                <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <>
-                  <Text style={styles.loadMoreLabel}>Load More</Text>
-                  <MaterialIcons name="expand-more" size={20} color={MealMindColors.onPrimary} />
+                  <Text style={styles.loadMoreLabel}>{t('results.loadMore')}</Text>
+                  <MaterialIcons name="expand-more" size={20} color={colors.onPrimary} />
                 </>
               )}
             </Pressable>
@@ -381,194 +390,196 @@ export default function ResultsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: {
-    paddingBottom: MealMindSpace.xl,
-  },
-  inner: {
-    maxWidth: MAX_W,
-    width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: MealMindSpace.lg,
-    paddingTop: MealMindSpace.lg,
-    gap: MealMindSpace.lg,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: MealMindSpace.sm,
-  },
-  topBarTitleCol: {
-    flex: 1,
-    minWidth: 0,
-  },
-  topBarKicker: {
-    fontFamily: MealMindFonts.labelSemibold,
-    fontSize: 11,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    color: MealMindColors.onSurfaceVariant,
-    marginBottom: 2,
-  },
-  topBarTitle: {
-    fontFamily: MealMindFonts.headlineExtraBold,
-    fontSize: 22,
-    letterSpacing: headlineTracking,
-    color: MealMindColors.primary,
-  },
-  pageHeader: {
-    gap: 4,
-  },
-  headline: {
-    fontFamily: MealMindFonts.headlineExtraBold,
-    fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: headlineTracking,
-    color: MealMindColors.onSurface,
-  },
-  lead: {
-    fontFamily: MealMindFonts.bodyMedium,
-    fontSize: 14,
-    color: MealMindColors.onSurfaceVariant,
-  },
-  pressed: {
-    opacity: 0.94,
-  },
-  heroCard: {
-    backgroundColor: MealMindColors.surfaceContainerLowest,
-    borderRadius: MealMindRadii.md,
-    overflow: 'hidden',
-    ...MealMindShadow.ambient,
-    position: 'relative',
-  },
-  heroImageWrap: {
-    height: 240,
-    width: '100%',
-    position: 'relative',
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
-  heroBottomScrim: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '58%',
-  },
-  heroOverlay: {
-    position: 'absolute',
-    left: MealMindSpace.lg,
-    right: MealMindSpace.lg,
-    bottom: MealMindSpace.lg,
-    gap: 6,
-  },
-  heroOverlayBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: MealMindSpace.sm,
-  },
-  heroOverlayBottomLeft: {
-    flex: 1,
-    minWidth: 0,
-  },
-  heroOverlayTimeWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: MealMindSpace.sm,
-    flexShrink: 0,
-  },
-  heroOverlayTitle: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 22,
-    lineHeight: 28,
-    color: '#ffffff',
-  },
-  heroOverlayTime: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 18,
-    color: MealMindColors.primaryContainer,
-  },
-  heroOverlayMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  heroOverlayKcalText: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 17,
-    color: 'rgba(255,255,255,0.96)',
-  },
-  heroOverlayDetailText: {
-    fontFamily: MealMindFonts.bodyMedium,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.88)',
-    flexShrink: 1,
-  },
-  loadMoreSection: {
-    alignItems: 'center',
-    paddingVertical: MealMindSpace.xl,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: OUTLINE_15,
-    gap: MealMindSpace.lg,
-  },
-  loadMoreBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: MealMindSpace.md,
-    paddingHorizontal: MealMindSpace.xl,
-    borderRadius: MealMindRadii.md,
-    backgroundColor: MealMindColors.primary,
-    minHeight: 48,
-  },
-  loadMoreBtnDisabled: {
-    opacity: 0.45,
-  },
-  loadMoreLabel: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 16,
-    color: MealMindColors.onPrimary,
-  },
-  categoryTitle: {
-    fontFamily: MealMindFonts.headlineBold,
-    fontSize: 20,
-    color: MealMindColors.onSurface,
-  },
-  categoryWrap: {
-    width: '100%',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: MealMindSpace.sm,
-  },
-  categoryChip: {
-    backgroundColor: MealMindColors.surfaceContainerLowest,
-    borderRadius: MealMindRadii.md,
-    paddingHorizontal: MealMindSpace.md,
-    paddingVertical: MealMindSpace.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: `${MealMindColors.outlineVariant}55`,
-  },
-  categoryChipSelected: {
-    backgroundColor: MealMindColors.primary,
-    borderColor: MealMindColors.primary,
-  },
-  categoryChipPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.98 }],
-  },
-  categoryChipText: {
-    fontFamily: MealMindFonts.bodyMedium,
-    fontSize: 14,
-    color: MealMindColors.onSurface,
-  },
-  categoryChipTextSelected: {
-    color: MealMindColors.onPrimary,
-  },
-  bottomPad: {
-    height: MealMindSpace.xl,
-  },
-});
+function createResultsStyles(colors: MealMindPalette) {
+  return StyleSheet.create({
+    scroll: {
+      paddingBottom: MealMindSpace.xl,
+    },
+    inner: {
+      maxWidth: MAX_W,
+      width: '100%',
+      alignSelf: 'center',
+      paddingHorizontal: MealMindSpace.lg,
+      paddingTop: MealMindSpace.lg,
+      gap: MealMindSpace.lg,
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: MealMindSpace.sm,
+    },
+    topBarTitleCol: {
+      flex: 1,
+      minWidth: 0,
+    },
+    topBarKicker: {
+      fontFamily: MealMindFonts.labelSemibold,
+      fontSize: 11,
+      letterSpacing: 1.4,
+      textTransform: 'uppercase',
+      color: colors.onSurfaceVariant,
+      marginBottom: 2,
+    },
+    topBarTitle: {
+      fontFamily: MealMindFonts.headlineExtraBold,
+      fontSize: 22,
+      letterSpacing: headlineTracking,
+      color: colors.primary,
+    },
+    pageHeader: {
+      gap: 4,
+    },
+    headline: {
+      fontFamily: MealMindFonts.headlineExtraBold,
+      fontSize: 34,
+      lineHeight: 40,
+      letterSpacing: headlineTracking,
+      color: colors.onSurface,
+    },
+    lead: {
+      fontFamily: MealMindFonts.bodyMedium,
+      fontSize: 14,
+      color: colors.onSurfaceVariant,
+    },
+    pressed: {
+      opacity: 0.94,
+    },
+    heroCard: {
+      backgroundColor: colors.surfaceContainerLowest,
+      borderRadius: MealMindRadii.md,
+      overflow: 'hidden',
+      ...mealMindAmbientShadow(colors),
+      position: 'relative',
+    },
+    heroImageWrap: {
+      height: 240,
+      width: '100%',
+      position: 'relative',
+    },
+    heroImage: {
+      width: '100%',
+      height: '100%',
+    },
+    heroBottomScrim: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: '58%',
+    },
+    heroOverlay: {
+      position: 'absolute',
+      left: MealMindSpace.lg,
+      right: MealMindSpace.lg,
+      bottom: MealMindSpace.lg,
+      gap: 6,
+    },
+    heroOverlayBottomRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: MealMindSpace.sm,
+    },
+    heroOverlayBottomLeft: {
+      flex: 1,
+      minWidth: 0,
+    },
+    heroOverlayTimeWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: MealMindSpace.sm,
+      flexShrink: 0,
+    },
+    heroOverlayTitle: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 22,
+      lineHeight: 28,
+      color: '#ffffff',
+    },
+    heroOverlayTime: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 18,
+      color: colors.primaryContainer,
+    },
+    heroOverlayMetaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    heroOverlayKcalText: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 17,
+      color: 'rgba(255,255,255,0.96)',
+    },
+    heroOverlayDetailText: {
+      fontFamily: MealMindFonts.bodyMedium,
+      fontSize: 12,
+      color: 'rgba(255,255,255,0.88)',
+      flexShrink: 1,
+    },
+    loadMoreSection: {
+      alignItems: 'center',
+      paddingVertical: MealMindSpace.xl,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: `${colors.outlineVariant}24`,
+      gap: MealMindSpace.lg,
+    },
+    loadMoreBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: MealMindSpace.md,
+      paddingHorizontal: MealMindSpace.xl,
+      borderRadius: MealMindRadii.md,
+      backgroundColor: colors.primary,
+      minHeight: 48,
+    },
+    loadMoreBtnDisabled: {
+      opacity: 0.45,
+    },
+    loadMoreLabel: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 16,
+      color: colors.onPrimary,
+    },
+    categoryTitle: {
+      fontFamily: MealMindFonts.headlineBold,
+      fontSize: 20,
+      color: colors.onSurface,
+    },
+    categoryWrap: {
+      width: '100%',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: MealMindSpace.sm,
+    },
+    categoryChip: {
+      backgroundColor: colors.surfaceContainerLowest,
+      borderRadius: MealMindRadii.md,
+      paddingHorizontal: MealMindSpace.md,
+      paddingVertical: MealMindSpace.sm,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: `${colors.outlineVariant}55`,
+    },
+    categoryChipSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    categoryChipPressed: {
+      opacity: 0.92,
+      transform: [{ scale: 0.98 }],
+    },
+    categoryChipText: {
+      fontFamily: MealMindFonts.bodyMedium,
+      fontSize: 14,
+      color: colors.onSurface,
+    },
+    categoryChipTextSelected: {
+      color: colors.onPrimary,
+    },
+    bottomPad: {
+      height: MealMindSpace.xl,
+    },
+  });
+}
