@@ -2,10 +2,10 @@ import { Redirect } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import type { MealMindPalette } from '@/constants/mealmind-colors';
-import { useMealMindColors } from '@/contexts/mealmind-theme-context';
+
 import {
   getIntroSeen,
+  getOnboardingComplete,
   hydrateLocalFlagsFromRemoteProfile,
   syncLocalIntroFlagsFromAuthUser,
 } from '@/lib/profile-storage';
@@ -15,8 +15,8 @@ import { fetchMealMindProfile } from '@/lib/supabase-profile';
 type BootTarget = 'signup' | 'intro' | 'tabs' | null;
 
 /**
- * Entry: Supabase session → (first-time only) intro wizard → tabs.
- * Returning users skip intro via Supabase `user_metadata` and/or `profiles` hydration.
+ * Entry: Supabase session → (first-time only) intro wizard → tabs (home / add ingredients).
+ * Returning users hydrate progress from `profiles` and Supabase `user_metadata` so they skip the 12-step flow.
  * Without a session, user is sent to sign up first.
  */
 function createBootStyles(colors: MealMindPalette) {
@@ -50,11 +50,16 @@ export default function Index() {
       const sessionForFlags = (await getSupabaseSession()) ?? session;
       await syncLocalIntroFlagsFromAuthUser(sessionForFlags.user);
 
-      const introSeen = await getIntroSeen();
+      const [introSeen, onboardingDone] = await Promise.all([getIntroSeen(), getOnboardingComplete()]);
       if (!introSeen) {
         setTarget('intro');
         return;
       }
+      if (onboardingDone) {
+        setTarget('tabs');
+        return;
+      }
+      await syncFlowGateBeforeTabs();
       setTarget('tabs');
     })();
   }, []);

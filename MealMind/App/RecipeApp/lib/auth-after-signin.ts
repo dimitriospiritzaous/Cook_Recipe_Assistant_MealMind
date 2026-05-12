@@ -1,5 +1,6 @@
 import type { Router } from 'expo-router';
 
+import { syncFlowGateBeforeTabs } from '@/lib/flow-gate';
 import { showAuthSuccessToast } from '@/lib/mealmind-toast';
 import {
   getIntroSeen,
@@ -33,6 +34,7 @@ export async function navigateAfterSuccessfulAuth(router: Router): Promise<void>
     router.replace('/intro');
     return;
   }
+  await syncFlowGateBeforeTabs();
   showAuthSuccessToast('Signed in', 'Welcome back.');
   router.replace('/(tabs)');
 }
